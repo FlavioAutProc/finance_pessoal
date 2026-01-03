@@ -1,0 +1,738 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finanças Pessoais | Controle Financeiro Inteligente</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Botão menu mobile -->
+    <button class="menu-toggle" id="menuToggle">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Header mobile -->
+    <div class="mobile-header">
+        <div class="mobile-title" id="mobileTitle">Dashboard</div>
+        <button class="btn btn-primary" id="mobileBackupBtn">
+            <i class="fas fa-database"></i>
+        </button>
+    </div>
+
+    <!-- Overlay para fechar sidebar no mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="container">
+        <!-- Sidebar FIXA -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-chart-pie logo-icon"></i>
+                    <span>Finanças Pessoais</span>
+                </div>
+                <button class="menu-toggle" id="closeMenu">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <ul class="nav-list">
+                    <li class="nav-item">
+                        <a href="#dashboard" class="nav-link active" data-page="dashboard">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#transactions" class="nav-link" data-page="transactions">
+                            <i class="fas fa-exchange-alt"></i>
+                            <span>Transações</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#investments" class="nav-link" data-page="investments">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Investimentos</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#add-transaction" class="nav-link" data-page="add-transaction">
+                            <i class="fas fa-plus-circle"></i>
+                            <span>Nova Transação</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#import-export" class="nav-link" data-page="import-export">
+                            <i class="fas fa-file-import"></i>
+                            <span>Importar/Exportar</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#limits" class="nav-link" data-page="limits">
+                            <i class="fas fa-bell"></i>
+                            <span>Alertas</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#settings" class="nav-link" data-page="settings">
+                            <i class="fas fa-cog"></i>
+                            <span>Configurações</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="themeToggle">
+                    <span>Modo Escuro</span>
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </aside>
+        
+        <!-- Conteúdo Principal -->
+        <main class="main-content">
+            <!-- Header desktop -->
+            <div class="header">
+                <div>
+                    <h1 class="page-title" id="pageTitle">Dashboard</h1>
+                    <p class="page-subtitle" id="pageSubtitle">Bem-vindo ao seu controle financeiro pessoal</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" id="backupBtn">
+                        <i class="fas fa-database"></i> Backup
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Páginas -->
+            <div id="pagesContainer">
+                <!-- Página: Dashboard -->
+                <section id="dashboard" class="page active">
+                    <!-- Welcome State -->
+                    <div class="welcome-state" id="welcomeState">
+                        <div class="welcome-icon">
+                            <i class="fas fa-piggy-bank"></i>
+                        </div>
+                        <h2 class="welcome-title">Bem-vindo ao seu Controle Financeiro</h2>
+                        <p class="welcome-subtitle">
+                            Comece a organizar suas finanças pessoais de forma inteligente. 
+                            Adicione suas receitas e despesas para ter uma visão completa da sua saúde financeira.
+                        </p>
+                        <div class="welcome-actions">
+                            <button class="btn btn-primary" id="welcomeAddTransaction">
+                                <i class="fas fa-plus-circle"></i> Adicionar Primeira Transação
+                            </button>
+                            <button class="btn btn-outline" id="welcomeImportData">
+                                <i class="fas fa-file-import"></i> Importar Dados
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Actions -->
+                    <div class="quick-actions" id="quickActions" style="display: none;">
+                        <div class="quick-action-card" data-page="add-transaction">
+                            <div class="quick-action-icon">
+                                <i class="fas fa-plus-circle"></i>
+                            </div>
+                            <h3 class="quick-action-title">Nova Transação</h3>
+                            <p class="quick-action-desc">Adicione uma nova receita ou despesa</p>
+                        </div>
+                        
+                        <div class="quick-action-card" data-page="transactions">
+                            <div class="quick-action-icon">
+                                <i class="fas fa-list"></i>
+                            </div>
+                            <h3 class="quick-action-title">Ver Transações</h3>
+                            <p class="quick-action-desc">Consulte seu histórico completo</p>
+                        </div>
+                        
+                        <div class="quick-action-card" data-page="investments">
+                            <div class="quick-action-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <h3 class="quick-action-title">Investimentos</h3>
+                            <p class="quick-action-desc">Gerencie seus investimentos</p>
+                        </div>
+                        
+                        <div class="quick-action-card" data-page="settings">
+                            <div class="quick-action-icon">
+                                <i class="fas fa-cog"></i>
+                            </div>
+                            <h3 class="quick-action-title">Configurações</h3>
+                            <p class="quick-action-desc">Personalize categorias e tipos</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Cards do Dashboard -->
+                    <div class="dashboard-cards" id="dashboardCards" style="display: none;">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Total de Receitas</h3>
+                                <i class="fas fa-arrow-up card-icon"></i>
+                            </div>
+                            <div class="card-value card-positive" id="totalIncome">R$ 0,00</div>
+                            <p class="card-neutral">Último mês: <span id="lastMonthIncome">R$ 0,00</span></p>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Total de Despesas</h3>
+                                <i class="fas fa-arrow-down card-icon"></i>
+                            </div>
+                            <div class="card-value card-negative" id="totalExpenses">R$ 0,00</div>
+                            <p class="card-neutral">Último mês: <span id="lastMonthExpenses">R$ 0,00</span></p>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Saldo Atual</h3>
+                                <i class="fas fa-wallet card-icon"></i>
+                            </div>
+                            <div class="card-value" id="currentBalance">R$ 0,00</div>
+                            <p class="card-neutral">Disponível para gastar</p>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Total Investido</h3>
+                                <i class="fas fa-chart-line card-icon"></i>
+                            </div>
+                            <div class="card-value card-neutral" id="totalInvested">R$ 0,00</div>
+                            <p class="card-neutral">Valor em investimentos</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Alertas -->
+                    <div id="alertsContainer"></div>
+                    
+                    <!-- Gráficos (aparecem quando há dados) -->
+                    <div class="charts-container" id="chartsContainer" style="display: none;">
+                        <div class="chart-card">
+                            <h3 class="chart-title">Despesas por Categoria</h3>
+                            <div class="chart-wrapper">
+                                <canvas id="expensesChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="chart-card">
+                            <h3 class="chart-title">Receita vs Despesa</h3>
+                            <div class="chart-wrapper">
+                                <canvas id="incomeVsExpensesChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Gráficos vazios -->
+                    <div class="charts-container" id="emptyChartsContainer" style="display: none;">
+                        <div class="chart-card">
+                            <h3 class="chart-title">Despesas por Categoria</h3>
+                            <div class="chart-empty">
+                                <div class="chart-empty-icon">
+                                    <i class="fas fa-chart-pie"></i>
+                                </div>
+                                <p class="chart-empty-text">Adicione despesas para visualizar os gráficos</p>
+                            </div>
+                        </div>
+                        
+                        <div class="chart-card">
+                            <h3 class="chart-title">Receita vs Despesa</h3>
+                            <div class="chart-empty">
+                                <div class="chart-empty-icon">
+                                    <i class="fas fa-balance-scale"></i>
+                                </div>
+                                <p class="chart-empty-text">Adicione transações para comparar receitas e despesas</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Página: Transações -->
+                <section id="transactions" class="page">
+                    <div class="transactions-container">
+                        <div class="table-header">
+                            <div>
+                                <h2>Transações Financeiras</h2>
+                                <p style="color: var(--gray-color); margin-top: 5px;">Gerencie seu histórico de transações</p>
+                            </div>
+                            <div class="filters">
+                                <select class="filter-select" id="filterType">
+                                    <option value="">Todos os Tipos</option>
+                                </select>
+                                <select class="filter-select" id="filterMonth">
+                                    <option value="">Todos os Meses</option>
+                                </select>
+                                <select class="filter-select" id="filterCategory">
+                                    <option value="">Todas as Categorias</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="table-container" id="transactionsTableContainer">
+                            <!-- Conteúdo será carregado dinamicamente -->
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Página: Investimentos -->
+                <section id="investments" class="page">
+                    <div class="transactions-container">
+                        <div class="table-header">
+                            <div>
+                                <h2>Investimentos</h2>
+                                <p style="color: var(--gray-color); margin-top: 5px;">Gerencie seus investimentos financeiros</p>
+                            </div>
+                            <div class="filters">
+                                <button class="btn btn-primary" id="addInvestmentBtn">
+                                    <i class="fas fa-plus"></i> Novo Investimento
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="table-container" id="investmentsTableContainer">
+                            <!-- Conteúdo será carregado dinamicamente -->
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Página: Nova Transação -->
+                <section id="add-transaction" class="page">
+                    <div class="form-container">
+                        <h2 class="form-title">Nova Transação</h2>
+                        <p style="color: var(--gray-color); margin-bottom: 30px;">Adicione uma nova receita, despesa ou investimento ao seu controle financeiro</p>
+                        
+                        <form id="transactionForm">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="date" class="required-field">Data</label>
+                                    <input type="date" id="date" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="type" class="required-field">Tipo</label>
+                                    <select id="type" required>
+                                        <option value="">Selecione o tipo</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="category" class="required-field">Categoria</label>
+                                    <select id="category" required disabled>
+                                        <option value="">Selecione uma categoria</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="classification" class="required-field">Classificação</label>
+                                    <select id="classification" required>
+                                        <option value="">Selecione a classificação</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="value" class="required-field">Valor (R$)</label>
+                                    <input type="text" id="value" placeholder="0,00" required 
+                                           pattern="^[0-9]+([,.][0-9]{1,2})?$"
+                                           title="Digite um valor válido (ex: 1.234,56 ou 1234.56)">
+                                    <small style="color: var(--gray-color); font-size: 0.85rem; margin-top: 5px;">
+                                        Use vírgula ou ponto como separador decimal
+                                    </small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="subcategory">Subcategoria</label>
+                                    <input type="text" id="subcategory" placeholder="Ex: Supermercado, Uber, Netflix...">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="description">Descrição Detalhada</label>
+                                <textarea id="description" rows="4" placeholder="Descreva detalhadamente esta transação..."></textarea>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="note">Observação</label>
+                                <textarea id="note" rows="2" placeholder="Observações adicionais..."></textarea>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-outline" id="cancelBtn">Cancelar</button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Salvar Transação
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+                
+                <!-- Página: Importar/Exportar -->
+                <section id="import-export" class="page">
+                    <div class="import-export-container">
+                        <!-- Importação -->
+                        <div class="import-export-card">
+                            <h3>Importar Dados</h3>
+                            <p style="color: var(--gray-color); margin-bottom: 20px;">Importe transações de arquivos CSV ou Excel</p>
+                            
+                            <div class="file-upload-area" id="importDropArea">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <p class="file-upload-text">Arraste e solte arquivos aqui</p>
+                                <p class="file-upload-hint">ou clique para selecionar</p>
+                                <input type="file" id="importFile" accept=".csv,.xlsx,.xls" hidden>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="importType">Formato do Arquivo</label>
+                                <select id="importType" class="filter-select">
+                                    <option value="csv">CSV</option>
+                                    <option value="xlsx">Excel (XLSX)</option>
+                                </select>
+                            </div>
+                            
+                            <button class="btn btn-primary" id="importBtn" style="margin-top: 20px;">
+                                <i class="fas fa-file-import"></i> Importar Dados
+                            </button>
+                            
+                            <div id="importStatus" style="margin-top: 20px;"></div>
+                        </div>
+                        
+                        <!-- Exportação -->
+                        <div class="import-export-card">
+                            <h3>Exportar Dados</h3>
+                            <p style="color: var(--gray-color); margin-bottom: 20px;">Exporte seus dados para análise externa</p>
+                            
+                            <div class="form-group">
+                                <label for="exportFormat">Formato de Exportação</label>
+                                <select id="exportFormat" class="filter-select">
+                                    <option value="csv">CSV</option>
+                                    <option value="xlsx">Excel (XLSX)</option>
+                                    <option value="pdf">PDF (Relatório)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="exportDateRange">Período</label>
+                                <select id="exportDateRange" class="filter-select">
+                                    <option value="all">Todos os dados</option>
+                                    <option value="month">Este mês</option>
+                                    <option value="year">Este ano</option>
+                                    <option value="custom">Personalizado</option>
+                                </select>
+                            </div>
+                            
+                            <div id="customDateRange" style="display: none; margin-top: 15px;">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="exportStartDate">Data Inicial</label>
+                                        <input type="date" id="exportStartDate" class="filter-select">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="exportEndDate">Data Final</label>
+                                        <input type="date" id="exportEndDate" class="filter-select">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button class="btn btn-success" id="exportBtn" style="margin-top: 20px;">
+                                <i class="fas fa-file-export"></i> Exportar Dados
+                            </button>
+                            
+                            <div style="margin-top: 25px; padding: 15px; background: var(--gray-light); border-radius: var(--border-radius);">
+                                <p style="font-size: 0.9rem; color: var(--gray-color);">
+                                    <i class="fas fa-info-circle" style="margin-right: 5px;"></i>
+                                    Exporte seus dados regularmente para manter backup seguro
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Página: Alertas -->
+                <section id="limits" class="page">
+                    <div class="form-container">
+                        <h2 class="form-title">Alertas e Limites</h2>
+                        <p style="color: var(--gray-color); margin-bottom: 30px;">Configure alertas para controlar seus gastos</p>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle alert-icon"></i>
+                            <div class="alert-content">
+                                <div class="alert-title">Como funcionam os alertas?</div>
+                                <div class="alert-message">
+                                    Configure limites para categorias específicas e receba alertas quando ultrapassar o valor definido. 
+                                    Isso ajuda a manter suas finanças sob controle.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="limitsContainer">
+                            <div class="card-empty">
+                                <div class="card-empty-icon">
+                                    <i class="fas fa-bell-slash"></i>
+                                </div>
+                                <p class="card-empty-text">Nenhum alerta configurado</p>
+                                <p style="color: var(--gray-color); margin-bottom: 20px;">
+                                    Configure limites para categorias de despesas para receber alertas
+                                </p>
+                                <button class="btn btn-primary" id="firstLimitBtn">
+                                    <i class="fas fa-plus"></i> Criar Primeiro Alerta
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button class="btn btn-primary" id="addLimitBtn">
+                                <i class="fas fa-plus"></i> Adicionar Novo Limite
+                            </button>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Página: Configurações -->
+                <section id="settings" class="page">
+                    <div class="form-container">
+                        <h2 class="form-title">Configurações</h2>
+                        <p style="color: var(--gray-color); margin-bottom: 30px;">Gerencie categorias, tipos e classificações do sistema</p>
+                        
+                        <div class="alert alert-info" style="margin-bottom: 30px;">
+                            <i class="fas fa-info-circle alert-icon"></i>
+                            <div class="alert-content">
+                                <div class="alert-title">Configurações Dinâmicas</div>
+                                <div class="alert-message">
+                                    Adicione, edite ou remova categorias, tipos e classificações conforme sua necessidade.
+                                    Todas as alterações serão refletidas imediatamente no sistema.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Tipos -->
+                        <div class="settings-section">
+                            <h3 style="margin-bottom: 20px; color: var(--primary-color);">
+                                <i class="fas fa-tags" style="margin-right: 10px;"></i>Tipos de Transação
+                            </h3>
+                            <div class="settings-list" id="typesList">
+                                <!-- Tipos serão carregados dinamicamente -->
+                            </div>
+                            <div class="form-row" style="margin-top: 20px;">
+                                <div class="form-group" style="flex: 1;">
+                                    <input type="text" id="newType" placeholder="Digite um novo tipo (ex: Investimento)" 
+                                           class="filter-select" style="width: 100%;">
+                                </div>
+                                <button class="btn btn-primary" id="addTypeBtn">
+                                    <i class="fas fa-plus"></i> Adicionar Tipo
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Categorias -->
+                        <div class="settings-section" style="margin-top: 40px;">
+                            <h3 style="margin-bottom: 20px; color: var(--primary-color);">
+                                <i class="fas fa-folder" style="margin-right: 10px;"></i>Categorias
+                            </h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="categoryTypeFilter">Filtrar por Tipo</label>
+                                    <select id="categoryTypeFilter" class="filter-select">
+                                        <option value="">Todos os tipos</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="settings-list" id="categoriesList">
+                                <!-- Categorias serão carregadas dinamicamente -->
+                            </div>
+                            <div class="form-row" style="margin-top: 20px;">
+                                <div class="form-group" style="flex: 1;">
+                                    <input type="text" id="newCategory" placeholder="Digite uma nova categoria" 
+                                           class="filter-select" style="width: 100%;">
+                                </div>
+                                <div class="form-group" style="min-width: 200px;">
+                                    <select id="newCategoryType" class="filter-select" style="width: 100%;">
+                                        <!-- Tipos serão carregados dinamicamente -->
+                                    </select>
+                                </div>
+                                <button class="btn btn-primary" id="addCategoryBtn">
+                                    <i class="fas fa-plus"></i> Adicionar Categoria
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Classificações -->
+                        <div class="settings-section" style="margin-top: 40px;">
+                            <h3 style="margin-bottom: 20px; color: var(--primary-color);">
+                                <i class="fas fa-layer-group" style="margin-right: 10px;"></i>Classificações
+                            </h3>
+                            <div class="settings-list" id="classificationsList">
+                                <!-- Classificações serão carregadas dinamicamente -->
+                            </div>
+                            <div class="form-row" style="margin-top: 20px;">
+                                <div class="form-group" style="flex: 1;">
+                                    <input type="text" id="newClassification" placeholder="Digite uma nova classificação" 
+                                           class="filter-select" style="width: 100%;">
+                                </div>
+                                <button class="btn btn-primary" id="addClassificationBtn">
+                                    <i class="fas fa-plus"></i> Adicionar Classificação
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Modal para edição de transação -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Editar Transação</h3>
+                <button class="modal-close" id="closeEditModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <input type="hidden" id="editId">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editDate">Data</label>
+                            <input type="date" id="editDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editType">Tipo</label>
+                            <select id="editType" required>
+                                <!-- Carregado dinamicamente -->
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editCategory">Categoria</label>
+                            <select id="editCategory" required>
+                                <!-- Carregado dinamicamente -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="editValue">Valor (R$)</label>
+                            <input type="text" id="editValue" required 
+                                   pattern="^[0-9]+([,.][0-9]{1,2})?$"
+                                   title="Digite um valor válido">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="editDescription">Descrição</label>
+                        <textarea id="editDescription" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="editNote">Observação</label>
+                        <textarea id="editNote" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="cancelEditBtn">Cancelar</button>
+                <button class="btn btn-primary" id="saveEditBtn">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para confirmação -->
+    <div class="modal" id="confirmModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Confirmar Exclusão</h3>
+                <button class="modal-close" id="closeConfirmModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="cancelDeleteBtn">Cancelar</button>
+                <button class="btn btn-danger" id="confirmDeleteBtn">Excluir</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para backup/restauração -->
+    <div class="modal" id="backupModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="backupModalTitle">Backup de Dados</h3>
+                <button class="modal-close" id="closeBackupModal">&times;</button>
+            </div>
+            <div class="modal-body" id="backupModalBody">
+                <!-- Conteúdo dinâmico -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para novo investimento -->
+    <div class="modal" id="investmentModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="investmentModalTitle">Novo Investimento</h3>
+                <button class="modal-close" id="closeInvestmentModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="investmentForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="investmentName" class="required-field">Nome do Investimento</label>
+                            <input type="text" id="investmentName" required placeholder="Ex: Tesouro Direto, CDB...">
+                        </div>
+                        <div class="form-group">
+                            <label for="investmentType" class="required-field">Tipo</label>
+                            <select id="investmentType" required>
+                                <option value="">Selecione o tipo</option>
+                                <option value="Renda Fixa">Renda Fixa</option>
+                                <option value="Renda Variável">Renda Variável</option>
+                                <option value="Fundo Imobiliário">Fundo Imobiliário</option>
+                                <option value="Ações">Ações</option>
+                                <option value="Tesouro Direto">Tesouro Direto</option>
+                                <option value="CDB">CDB</option>
+                                <option value="LCI/LCA">LCI/LCA</option>
+                                <option value="Outros">Outros</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="investmentDate" class="required-field">Data da Aplicação</label>
+                            <input type="date" id="investmentDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="investmentValue" class="required-field">Valor Investido (R$)</label>
+                            <input type="text" id="investmentValue" required placeholder="0,00"
+                                   pattern="^[0-9]+([,.][0-9]{1,2})?$">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="investmentQuantity">Quantidade</label>
+                            <input type="number" id="investmentQuantity" step="0.001" placeholder="Quantidade de cotas/ações">
+                        </div>
+                        <div class="form-group">
+                            <label for="investmentCurrentValue">Valor Atual (R$)</label>
+                            <input type="text" id="investmentCurrentValue" placeholder="0,00"
+                                   pattern="^[0-9]+([,.][0-9]{1,2})?$">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="investmentDescription">Descrição</label>
+                        <textarea id="investmentDescription" rows="3" placeholder="Detalhes sobre o investimento..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="cancelInvestmentBtn">Cancelar</button>
+                <button class="btn btn-primary" id="saveInvestmentBtn">Salvar Investimento</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="main.js"></script>
+</body>
+</html>
