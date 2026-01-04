@@ -850,19 +850,61 @@ class AppController {
     /**
      * Converte string monetária para número
      */
+    /**
+ * Converte string monetária para número - CORRIGIDO
+ */
     parseCurrency(value) {
         if (!value) return 0;
         
+        // Se já for número, retornar como está
+        if (typeof value === 'number') return value;
+        
+        // Converter para string
+        let strValue = value.toString().trim();
+        
+        console.log('parseCurrency input:', strValue); // Debug
+        
         // Remover tudo que não é número, vírgula ou ponto
-        value = value.toString().replace(/[^\d,.-]/g, '');
+        strValue = strValue.replace(/[^\d,.-]/g, '');
         
-        // Substituir ponto por nada e vírgula por ponto
-        value = value.replace(/\./g, '').replace(',', '.');
+        console.log('parseCurrency após limpeza:', strValue); // Debug
         
-        const parsed = parseFloat(value);
+        // Se estiver vazio, retornar 0
+        if (!strValue) return 0;
+        
+        // VERIFICAR FORMATO:
+        // Se tem vírgula E ponto = possível formato internacional (1.234,56)
+        // Se tem só vírgula = formato brasileiro (1234,56)
+        // Se tem só ponto = formato americano (1234.56)
+        
+        if (strValue.includes(',') && strValue.includes('.')) {
+            // Formato: 1.234,56 (milhares separados por ponto, decimal por vírgula)
+            // Remover pontos dos milhares, substituir vírgula por ponto
+            strValue = strValue.replace(/\./g, '').replace(',', '.');
+        } else if (strValue.includes(',') && !strValue.includes('.')) {
+            // Formato: 1234,56 ou 1.234,56 (sem ponto nos milhares)
+            // Verificar se a vírgula é separador decimal
+            const parts = strValue.split(',');
+            if (parts[1] && parts[1].length <= 2) {
+                // Vírgula é separador decimal (centavos)
+                // Substituir vírgula por ponto
+                strValue = strValue.replace(',', '.');
+            } else {
+                // Vírgula pode ser separador de milhares (formato europeu)
+                // Tratar como número inteiro
+                strValue = strValue.replace(/,/g, '');
+            }
+        }
+        // Se tem só ponto, manter como está (formato americano)
+        
+        console.log('parseCurrency após tratamento:', strValue); // Debug
+        
+        const parsed = parseFloat(strValue);
+        
+        console.log('parseCurrency resultado:', parsed, isNaN(parsed) ? 'INVÁLIDO' : 'VÁLIDO'); // Debug
+        
         return isNaN(parsed) ? 0 : parsed;
     }
-
     /**
      * Mostra uma notificação
      */
