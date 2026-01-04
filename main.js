@@ -110,7 +110,7 @@ class AppController {
         document.getElementById('addLimitBtn')?.addEventListener('click', () => this.addNewLimit());
 
         // No método setupEventListeners() do AppController, adicione:
-        document.getElementById('clearAllTransactionsBtn')?.addEventListener('click', () => this.clearAllTransactions());
+document.getElementById('clearAllTransactionsBtn')?.addEventListener('click', () => this.clearAllTransactions());
         
         // Botões do welcome state
         document.getElementById('welcomeAddTransaction')?.addEventListener('click', () => this.navigateTo('add-transaction'));
@@ -4619,438 +4619,731 @@ class ImportExportService {
     }
 
     // main.js - Na classe ImportExportService, ADICIONE este método:
-    async exportCompleteReport() {
-        try {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('p', 'mm', 'a4');
+    // main.js - Função exportCompleteReport() corrigida - ADICIONAR ou SUBSTITUIR
+
+// main.js - ATUALIZAR a função exportCompleteReport() na classe ImportExportService
+
+async exportCompleteReport() {
+    try {
+        const { jsPDF } = window.jspdf;
+        
+        // Modo paisagem para mais espaço
+        const doc = new jsPDF('l', 'mm', 'a4');
+        
+        // Configurações de página
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 15;
+        const contentWidth = pageWidth - (2 * margin);
+        
+        // Cores
+        const primaryColor = [67, 97, 238];
+        const successColor = [46, 204, 113];
+        const warningColor = [241, 196, 15];
+        const dangerColor = [231, 76, 60];
+        const darkColor = [52, 73, 94];
+        const lightGray = [245, 245, 245];
+        
+        // Data do relatório
+        const now = new Date();
+        const reportDate = now.toLocaleDateString('pt-BR');
+        const reportTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        
+        // 1. CABEÇALHO
+        doc.setFillColor(...primaryColor);
+        doc.rect(0, 0, pageWidth, 25, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('RELATÓRIO FINANCEIRO COMPLETO', margin, 17);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Gerado em: ${reportDate} às ${reportTime}`, pageWidth - margin, 22, { align: 'right' });
+        
+        let yPosition = 35;
+        
+        // 2. OBTER DADOS
+        const transactions = await this.database.getAllTransactions();
+        const investments = await this.database.getAllInvestments();
+        const limits = await this.database.getAllLimits();
+        
+        // Calcular totais
+        let totalIncome = 0, totalExpenses = 0, totalInvestments = 0;
+        let currentMonthIncome = 0, currentMonthExpenses = 0;
+        
+        const currentDate = new Date();
+        const currentMonth = currentDate.toLocaleString('pt-BR', { month: 'long' });
+        const currentYear = currentDate.getFullYear();
+        
+        transactions.forEach(transaction => {
+            if (transaction.type === 'Receita') {
+                totalIncome += transaction.value;
+                if (transaction.month === currentMonth && transaction.year === currentYear) {
+                    currentMonthIncome += transaction.value;
+                }
+            } else if (transaction.type === 'Despesa') {
+                totalExpenses += transaction.value;
+                if (transaction.month === currentMonth && transaction.year === currentYear) {
+                    currentMonthExpenses += transaction.value;
+                }
+            } else if (transaction.type === 'Investimento') {
+                totalInvestments += transaction.value;
+            }
+        });
+        
+        const currentBalance = totalIncome - totalExpenses;
+        const currentMonthBalance = currentMonthIncome - currentMonthExpenses;
+        
+        // 3. RESUMO EXECUTIVO - Layout compacto
+        doc.setTextColor(...darkColor);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('RESUMO EXECUTIVO', margin, yPosition);
+        yPosition += 7;
+        
+        // Fundo do resumo
+        doc.setFillColor(...lightGray);
+        doc.roundedRect(margin, yPosition, contentWidth, 35, 3, 3, 'F');
+        
+        // Coluna 1: Totais Gerais
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 100, 100);
+        doc.text('TOTAIS GERAIS', margin + 10, yPosition + 8);
+        
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...darkColor);
+        doc.text('Receitas:', margin + 10, yPosition + 14);
+        doc.text('Despesas:', margin + 10, yPosition + 20);
+        doc.text('Saldo:', margin + 10, yPosition + 26);
+        doc.text('Investimentos:', margin + 10, yPosition + 32);
+        
+        // Valores coluna 1
+        doc.text(`R$ ${this.app.formatCurrency(totalIncome)}`, margin + 45, yPosition + 14);
+        doc.text(`R$ ${this.app.formatCurrency(totalExpenses)}`, margin + 45, yPosition + 20);
+        
+        // Colorir saldo
+        if (currentBalance >= 0) {
+            doc.setTextColor(...successColor);
+        } else {
+            doc.setTextColor(...dangerColor);
+        }
+        doc.text(`R$ ${this.app.formatCurrency(currentBalance)}`, margin + 45, yPosition + 26);
+        
+        doc.setTextColor(...darkColor);
+        doc.text(`R$ ${this.app.formatCurrency(totalInvestments)}`, margin + 45, yPosition + 32);
+        
+        // Coluna 2: Este Mês
+        doc.setTextColor(100, 100, 100);
+        doc.setFont('helvetica', 'normal');
+        doc.text('ESTE MÊS', margin + 110, yPosition + 8);
+        
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...darkColor);
+        doc.text('Receitas:', margin + 110, yPosition + 14);
+        doc.text('Despesas:', margin + 110, yPosition + 20);
+        doc.text('Saldo:', margin + 110, yPosition + 26);
+        doc.text('Transações:', margin + 110, yPosition + 32);
+        
+        // Valores coluna 2
+        doc.text(`R$ ${this.app.formatCurrency(currentMonthIncome)}`, margin + 150, yPosition + 14);
+        doc.text(`R$ ${this.app.formatCurrency(currentMonthExpenses)}`, margin + 150, yPosition + 20);
+        
+        // Colorir saldo do mês
+        if (currentMonthBalance >= 0) {
+            doc.setTextColor(...successColor);
+        } else {
+            doc.setTextColor(...dangerColor);
+        }
+        doc.text(`R$ ${this.app.formatCurrency(currentMonthBalance)}`, margin + 150, yPosition + 26);
+        
+        doc.setTextColor(...darkColor);
+        doc.text(transactions.length.toString(), margin + 150, yPosition + 32);
+        
+        yPosition += 45;
+        
+        // 4. DESPESAS POR CATEGORIA (TOP 6)
+        const categoryTotals = {};
+        transactions.forEach(t => {
+            if (t.type === 'Despesa') {
+                if (!categoryTotals[t.category]) categoryTotals[t.category] = 0;
+                categoryTotals[t.category] += t.value;
+            }
+        });
+        
+        const sortedCategories = Object.entries(categoryTotals)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 6);
+        
+        if (sortedCategories.length > 0) {
+            // Título
+            doc.setTextColor(...darkColor);
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('TOP 6 - DESPESAS POR CATEGORIA', margin, yPosition);
+            yPosition += 8;
             
-            // Configurações gerais
-            const pageWidth = doc.internal.pageSize.getWidth();
-            const margin = 20;
-            const contentWidth = pageWidth - (2 * margin);
-            
-            // Data do relatório
-            const reportDate = new Date().toLocaleDateString('pt-BR');
-            
-            // 1. CABEÇALHO
-            doc.setFillColor(67, 97, 238);
-            doc.rect(0, 0, pageWidth, 40, 'F');
+            // Cabeçalho da tabela
+            doc.setFillColor(...primaryColor);
+            doc.roundedRect(margin, yPosition, contentWidth, 8, 2, 2, 'F');
             
             doc.setTextColor(255, 255, 255);
-            doc.setFontSize(24);
+            doc.setFontSize(8);
             doc.setFont('helvetica', 'bold');
-            doc.text('RELATÓRIO FINANCEIRO', pageWidth / 2, 25, { align: 'center' });
             
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'normal');
-            doc.text(`Gerado em: ${reportDate}`, pageWidth / 2, 33, { align: 'center' });
+            // Ajustar larguras das colunas para caber na página
+            doc.text('CATEGORIA', margin + 5, yPosition + 5.5);
+            doc.text('VALOR', margin + 85, yPosition + 5.5);
+            doc.text('%', margin + 135, yPosition + 5.5);
+            doc.text('MÉDIA/MÊS', pageWidth - margin - 5, yPosition + 5.5, { align: 'right' });
             
-            let yPosition = 50;
+            yPosition += 8;
             
-            // 2. RESUMO EXECUTIVO
-            doc.setTextColor(0, 0, 0);
-            doc.setFontSize(16);
-            doc.setFont('helvetica', 'bold');
-            doc.text('RESUMO EXECUTIVO', margin, yPosition);
+            // Linhas da tabela
+            sortedCategories.forEach(([category, value], index) => {
+                const percentage = totalExpenses > 0 ? (value / totalExpenses) * 100 : 0;
+                
+                // Calcular meses ativos
+                const monthsActive = [...new Set(transactions
+                    .filter(t => t.category === category && t.type === 'Despesa')
+                    .map(t => `${t.month}/${t.year}`))].length;
+                
+                const monthlyAvg = monthsActive > 0 ? value / monthsActive : value;
+                
+                // Alternar cores
+                if (index % 2 === 0) {
+                    doc.setFillColor(255, 255, 255);
+                } else {
+                    doc.setFillColor(...lightGray);
+                }
+                doc.rect(margin, yPosition, contentWidth, 8, 'F');
+                
+                // Categoria (truncar se necessário)
+                doc.setTextColor(...darkColor);
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'normal');
+                
+                const categoryDisplay = category.length > 20 ? 
+                    category.substring(0, 20) + '...' : category;
+                doc.text(categoryDisplay, margin + 5, yPosition + 5.5);
+                
+                // Valor
+                doc.text(`R$ ${this.app.formatCurrency(value)}`, margin + 85, yPosition + 5.5);
+                
+                // Porcentagem com cor
+                if (percentage > 50) {
+                    doc.setTextColor(...dangerColor);
+                } else if (percentage > 30) {
+                    doc.setTextColor(...warningColor);
+                } else {
+                    doc.setTextColor(...successColor);
+                }
+                doc.text(`${percentage.toFixed(1)}%`, margin + 135, yPosition + 5.5);
+                
+                // Média mensal
+                doc.setTextColor(...darkColor);
+                doc.text(`R$ ${this.app.formatCurrency(monthlyAvg)}`, 
+                        pageWidth - margin - 5, yPosition + 5.5, { align: 'right' });
+                
+                yPosition += 8;
+            });
             
             yPosition += 10;
             
-            // Obter dados
-            const transactions = await this.database.getAllTransactions();
-            const investments = await this.database.getAllInvestments();
-            const limits = await this.database.getAllLimits();
-            
-            // Calcular totais
-            let totalIncome = 0;
-            let totalExpenses = 0;
-            let totalInvestments = 0;
-            const categoryTotals = {};
-            const monthlyTotals = {};
-            
-            transactions.forEach(transaction => {
-                if (transaction.type === 'Receita') {
-                    totalIncome += transaction.value;
-                } else if (transaction.type === 'Despesa') {
-                    totalExpenses += transaction.value;
-                    
-                    // Acumular por categoria
-                    if (!categoryTotals[transaction.category]) {
-                        categoryTotals[transaction.category] = 0;
-                    }
-                    categoryTotals[transaction.category] += transaction.value;
-                    
-                    // Acumular por mês
-                    const monthKey = `${transaction.month}/${transaction.year}`;
-                    if (!monthlyTotals[monthKey]) {
-                        monthlyTotals[monthKey] = { income: 0, expenses: 0 };
-                    }
-                    monthlyTotals[monthKey].expenses += transaction.value;
-                } else if (transaction.type === 'Investimento') {
-                    totalInvestments += transaction.value;
-                }
+            // Verificar espaço na página
+            if (yPosition > pageHeight - 50) {
+                doc.addPage('l');
+                yPosition = 20;
+            }
+        }
+        
+        // 5. ALERTAS DE LIMITES - NOVA SEÇÃO
+        const alerts = [];
+        if (limits.length > 0) {
+            for (const limit of limits) {
+                const currentSpent = await this.database.getCategorySpentThisMonth(limit.category);
+                const percentage = (currentSpent / limit.limit) * 100;
                 
-                // Para receitas também acumular por mês
-                if (transaction.type === 'Receita') {
-                    const monthKey = `${transaction.month}/${transaction.year}`;
-                    if (!monthlyTotals[monthKey]) {
-                        monthlyTotals[monthKey] = { income: 0, expenses: 0 };
-                    }
-                    monthlyTotals[monthKey].income += transaction.value;
+                if (percentage > 100) {
+                    alerts.push({
+                        category: limit.category,
+                        limit: limit.limit,
+                        spent: currentSpent,
+                        percentage: percentage,
+                        type: 'danger',
+                        message: `Ultrapassou o limite em R$ ${this.app.formatCurrency(currentSpent - limit.limit)}`
+                    });
+                } else if (percentage > 80) {
+                    alerts.push({
+                        category: limit.category,
+                        limit: limit.limit,
+                        spent: currentSpent,
+                        percentage: percentage,
+                        type: 'warning',
+                        message: `Próximo do limite, restam R$ ${this.app.formatCurrency(limit.limit - currentSpent)}`
+                    });
                 }
-            });
-            
-            const currentBalance = totalIncome - totalExpenses;
-            
-            // Resumo em tabela
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'normal');
-            
-            const summaryData = [
-                ['RECEITAS TOTAIS', `R$ ${this.app.formatCurrency(totalIncome)}`],
-                ['DESPESAS TOTAIS', `R$ ${this.app.formatCurrency(totalExpenses)}`],
-                ['SALDO ATUAL', `R$ ${this.app.formatCurrency(currentBalance)}`],
-                ['INVESTIMENTOS', `R$ ${this.app.formatCurrency(totalInvestments)}`],
-                ['TOTAL DE TRANSAÇÕES', transactions.length.toString()],
-                ['TOTAL DE INVESTIMENTOS', investments.length.toString()]
-            ];
-            
-            summaryData.forEach((row, index) => {
-                const y = yPosition + (index * 8);
-                doc.text(row[0], margin, y);
-                doc.text(row[1], pageWidth - margin, y, { align: 'right' });
-                
-                // Linha divisória
-                if (index === 2) {
-                    doc.setDrawColor(200, 200, 200);
-                    doc.line(margin, y + 3, pageWidth - margin, y + 3);
-                }
-            });
-            
-            yPosition += (summaryData.length * 8) + 15;
-            
-            // 3. DESPESAS POR CATEGORIA (Top 10)
-            doc.setFontSize(16);
+            }
+        }
+        
+        if (alerts.length > 0) {
+            // Título
+            doc.setTextColor(...darkColor);
+            doc.setFontSize(12);
             doc.setFont('helvetica', 'bold');
-            doc.text('DESPESAS POR CATEGORIA', margin, yPosition);
+            doc.text('ALERTAS DE LIMITES', margin, yPosition);
+            yPosition += 8;
+            
+            // Cabeçalho da tabela
+            doc.setFillColor(...primaryColor);
+            doc.roundedRect(margin, yPosition, contentWidth, 8, 2, 2, 'F');
+            
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'bold');
+            
+            doc.text('CATEGORIA', margin + 5, yPosition + 5.5);
+            doc.text('LIMITE', margin + 70, yPosition + 5.5);
+            doc.text('GASTO', margin + 110, yPosition + 5.5);
+            doc.text('%', margin + 150, yPosition + 5.5);
+            doc.text('STATUS', pageWidth - margin - 5, yPosition + 5.5, { align: 'right' });
+            
+            yPosition += 8;
+            
+            // Linhas da tabela
+            alerts.forEach((alert, index) => {
+                // Verificar espaço
+                if (yPosition > pageHeight - 20) {
+                    doc.addPage('l');
+                    yPosition = 20;
+                    
+                    // Re-print cabeçalho
+                    doc.setFillColor(...primaryColor);
+                    doc.roundedRect(margin, yPosition, contentWidth, 8, 2, 2, 'F');
+                    
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFontSize(8);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('CATEGORIA', margin + 5, yPosition + 5.5);
+                    doc.text('LIMITE', margin + 70, yPosition + 5.5);
+                    doc.text('GASTO', margin + 110, yPosition + 5.5);
+                    doc.text('%', margin + 150, yPosition + 5.5);
+                    doc.text('STATUS', pageWidth - margin - 5, yPosition + 5.5, { align: 'right' });
+                    
+                    yPosition += 8;
+                }
+                
+                // Alternar cores
+                if (index % 2 === 0) {
+                    doc.setFillColor(255, 255, 255);
+                } else {
+                    doc.setFillColor(...lightGray);
+                }
+                doc.rect(margin, yPosition, contentWidth, 8, 'F');
+                
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'normal');
+                
+                // Categoria
+                const categoryDisplay = alert.category.length > 18 ? 
+                    alert.category.substring(0, 18) + '...' : alert.category;
+                doc.setTextColor(...darkColor);
+                doc.text(categoryDisplay, margin + 5, yPosition + 5.5);
+                
+                // Limite
+                doc.text(`R$ ${this.app.formatCurrency(alert.limit)}`, margin + 70, yPosition + 5.5);
+                
+                // Gasto
+                doc.text(`R$ ${this.app.formatCurrency(alert.spent)}`, margin + 110, yPosition + 5.5);
+                
+                // Porcentagem
+                if (alert.percentage > 100) {
+                    doc.setTextColor(...dangerColor);
+                } else {
+                    doc.setTextColor(...warningColor);
+                }
+                doc.text(`${alert.percentage.toFixed(1)}%`, margin + 150, yPosition + 5.5);
+                
+                // Status
+                if (alert.percentage > 100) {
+                    doc.setTextColor(...dangerColor);
+                    doc.text('ULTRAPASSADO', pageWidth - margin - 5, yPosition + 5.5, { align: 'right' });
+                } else {
+                    doc.setTextColor(...warningColor);
+                    doc.text('ATENÇÃO', pageWidth - margin - 5, yPosition + 5.5, { align: 'right' });
+                }
+                
+                yPosition += 8;
+            });
             
             yPosition += 10;
+        }
+        
+        // 6. TRANSAÇÕES RECENTES (máximo 10)
+        if (transactions.length > 0) {
+            // Título
+            doc.setTextColor(...darkColor);
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('TRANSAÇÕES RECENTES', margin, yPosition);
+            yPosition += 8;
             
-            // Ordenar categorias por valor
-            const sortedCategories = Object.entries(categoryTotals)
-                .sort((a, b) => b[1] - a[1])
+            // Ordenar por data
+            const recentTransactions = [...transactions]
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
                 .slice(0, 10);
             
-            if (sortedCategories.length > 0) {
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'normal');
-                
-                // Cabeçalho da tabela
-                doc.setFillColor(240, 240, 240);
-                doc.rect(margin, yPosition - 5, contentWidth, 8, 'F');
-                
-                doc.setFont('helvetica', 'bold');
-                doc.text('CATEGORIA', margin + 5, yPosition);
-                doc.text('VALOR', pageWidth - margin - 30, yPosition);
-                doc.text('%', pageWidth - margin - 5, yPosition, { align: 'right' });
-                
-                yPosition += 8;
-                
-                // Linhas da tabela
-                sortedCategories.forEach(([category, value], index) => {
-                    const percentage = (value / totalExpenses) * 100;
+            // Cabeçalho da tabela - AJUSTADO para caber
+            doc.setFillColor(...primaryColor);
+            doc.roundedRect(margin, yPosition, contentWidth, 8, 2, 2, 'F');
+            
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'bold');
+            
+            // Colunas ajustadas para não vazar
+            doc.text('DATA', margin + 5, yPosition + 5.5);
+            doc.text('TIPO', margin + 30, yPosition + 5.5);
+            doc.text('CATEGORIA', margin + 60, yPosition + 5.5);
+            doc.text('DESCRIÇÃO', margin + 110, yPosition + 5.5);
+            doc.text('VALOR', pageWidth - margin - 5, yPosition + 5.5, { align: 'right' });
+            
+            yPosition += 8;
+            
+            // Linhas da tabela
+            recentTransactions.forEach((transaction, index) => {
+                // Verificar espaço na página
+                if (yPosition > pageHeight - 20) {
+                    doc.addPage('l');
+                    yPosition = 20;
                     
-                    // Alternar cores das linhas
-                    if (index % 2 === 0) {
-                        doc.setFillColor(250, 250, 250);
-                    } else {
-                        doc.setFillColor(245, 245, 245);
-                    }
-                    doc.rect(margin, yPosition - 4, contentWidth, 8, 'F');
+                    // Re-print cabeçalho
+                    doc.setFillColor(...primaryColor);
+                    doc.roundedRect(margin, yPosition, contentWidth, 8, 2, 2, 'F');
                     
-                    doc.setFont('helvetica', 'normal');
-                    doc.text(category, margin + 5, yPosition);
-                    doc.text(`R$ ${this.app.formatCurrency(value)}`, pageWidth - margin - 30, yPosition);
-                    doc.text(`${percentage.toFixed(1)}%`, pageWidth - margin - 5, yPosition, { align: 'right' });
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFontSize(8);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('DATA', margin + 5, yPosition + 5.5);
+                    doc.text('TIPO', margin + 30, yPosition + 5.5);
+                    doc.text('CATEGORIA', margin + 60, yPosition + 5.5);
+                    doc.text('DESCRIÇÃO', margin + 110, yPosition + 5.5);
+                    doc.text('VALOR', pageWidth - margin - 5, yPosition + 5.5, { align: 'right' });
                     
                     yPosition += 8;
-                    
-                    // Verificar se precisa de nova página
-                    if (yPosition > 270 && index < sortedCategories.length - 1) {
-                        doc.addPage();
-                        yPosition = 20;
-                    }
-                });
+                }
                 
-                yPosition += 10;
-            } else {
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'italic');
-                doc.text('Nenhuma despesa registrada.', margin, yPosition);
-                yPosition += 15;
-            }
-            
-            // 4. ANÁLISE MENSAL
-            doc.setFontSize(16);
-            doc.setFont('helvetica', 'bold');
-            doc.text('ANÁLISE MENSAL', margin, yPosition);
+                // Alternar cores
+                if (index % 2 === 0) {
+                    doc.setFillColor(255, 255, 255);
+                } else {
+                    doc.setFillColor(...lightGray);
+                }
+                doc.rect(margin, yPosition, contentWidth, 8, 'F');
+                
+                // Cor baseada no tipo
+                if (transaction.type === 'Receita') {
+                    doc.setTextColor(...successColor);
+                } else if (transaction.type === 'Despesa') {
+                    doc.setTextColor(...dangerColor);
+                } else {
+                    doc.setTextColor(...primaryColor);
+                }
+                
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'normal');
+                
+                // Data
+                const date = new Date(transaction.date);
+                doc.text(date.toLocaleDateString('pt-BR'), margin + 5, yPosition + 5.5);
+                
+                // Tipo (abreviado)
+                const tipoAbrev = transaction.type.substring(0, 3);
+                doc.text(tipoAbrev, margin + 30, yPosition + 5.5);
+                
+                // Categoria (truncada)
+                const categoriaAbrev = transaction.category.length > 12 ? 
+                    transaction.category.substring(0, 12) + '...' : transaction.category;
+                doc.text(categoriaAbrev, margin + 60, yPosition + 5.5);
+                
+                // Descrição (truncada)
+                const descricao = transaction.description || '-';
+                const descricaoAbrev = descricao.length > 25 ? 
+                    descricao.substring(0, 25) + '...' : descricao;
+                doc.text(descricaoAbrev, margin + 110, yPosition + 5.5);
+                
+                // Valor
+                const prefix = transaction.type === 'Receita' ? '+' : '-';
+                const valorFormatado = this.app.formatCurrency(transaction.value);
+                doc.text(`${prefix} R$ ${valorFormatado}`, 
+                        pageWidth - margin - 5, yPosition + 5.5, { align: 'right' });
+                
+                yPosition += 8;
+            });
             
             yPosition += 10;
-            
-            const sortedMonths = Object.entries(monthlyTotals)
-                .sort((a, b) => {
-                    const [monthA, yearA] = a[0].split('/');
-                    const [monthB, yearB] = b[0].split('/');
-                    const monthOrder = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 
-                                    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-                    
-                    if (parseInt(yearA) !== parseInt(yearB)) {
-                        return parseInt(yearA) - parseInt(yearB);
-                    }
-                    return monthOrder.indexOf(monthA.toLowerCase()) - monthOrder.indexOf(monthB.toLowerCase());
-                });
-            
-            if (sortedMonths.length > 0) {
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'normal');
-                
-                // Cabeçalho da tabela
-                doc.setFillColor(240, 240, 240);
-                doc.rect(margin, yPosition - 5, contentWidth, 8, 'F');
-                
-                doc.setFont('helvetica', 'bold');
-                doc.text('PERÍODO', margin + 5, yPosition);
-                doc.text('RECEITAS', margin + 70, yPosition);
-                doc.text('DESPESAS', margin + 120, yPosition);
-                doc.text('SALDO', pageWidth - margin - 5, yPosition, { align: 'right' });
-                
-                yPosition += 8;
-                
-                // Linhas da tabela
-                sortedMonths.forEach(([month, totals], index) => {
-                    const balance = totals.income - totals.expenses;
-                    
-                    // Alternar cores das linhas
-                    if (index % 2 === 0) {
-                        doc.setFillColor(250, 250, 250);
-                    } else {
-                        doc.setFillColor(245, 245, 245);
-                    }
-                    doc.rect(margin, yPosition - 4, contentWidth, 8, 'F');
-                    
-                    doc.setFont('helvetica', 'normal');
-                    doc.text(month, margin + 5, yPosition);
-                    doc.text(`R$ ${this.app.formatCurrency(totals.income)}`, margin + 70, yPosition);
-                    doc.text(`R$ ${this.app.formatCurrency(totals.expenses)}`, margin + 120, yPosition);
-                    
-                    // Colorir saldo
-                    if (balance >= 0) {
-                        doc.setTextColor(0, 150, 0); // Verde para positivo
-                    } else {
-                        doc.setTextColor(200, 0, 0); // Vermelho para negativo
-                    }
-                    doc.text(`R$ ${this.app.formatCurrency(balance)}`, pageWidth - margin - 5, yPosition, { align: 'right' });
-                    
-                    doc.setTextColor(0, 0, 0); // Resetar cor
-                    
-                    yPosition += 8;
-                    
-                    // Verificar se precisa de nova página
-                    if (yPosition > 270 && index < sortedMonths.length - 1) {
-                        doc.addPage();
-                        yPosition = 20;
-                    }
-                });
-                
-                yPosition += 10;
-            }
-            
-            // 5. INVESTIMENTOS
-            if (investments.length > 0) {
-                doc.setFontSize(16);
-                doc.setFont('helvetica', 'bold');
-                doc.text('INVESTIMENTOS', margin, yPosition);
-                
-                yPosition += 10;
-                
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'normal');
-                
-                // Cabeçalho da tabela
-                doc.setFillColor(240, 240, 240);
-                doc.rect(margin, yPosition - 5, contentWidth, 8, 'F');
-                
-                doc.setFont('helvetica', 'bold');
-                doc.text('NOME', margin + 5, yPosition);
-                doc.text('TIPO', margin + 70, yPosition);
-                doc.text('VALOR INVESTIDO', margin + 120, yPosition);
-                doc.text('VALOR ATUAL', pageWidth - margin - 30, yPosition);
-                doc.text('RENT.', pageWidth - margin - 5, yPosition, { align: 'right' });
-                
-                yPosition += 8;
-                
-                // Linhas da tabela
-                investments.forEach((investment, index) => {
-                    const currentValue = investment.currentValue || investment.value;
-                    const profit = currentValue - investment.value;
-                    const profitPercentage = (profit / investment.value) * 100;
-                    
-                    // Alternar cores das linhas
-                    if (index % 2 === 0) {
-                        doc.setFillColor(250, 250, 250);
-                    } else {
-                        doc.setFillColor(245, 245, 245);
-                    }
-                    doc.rect(margin, yPosition - 4, contentWidth, 8, 'F');
-                    
-                    doc.setFont('helvetica', 'normal');
-                    doc.text(investment.name.substring(0, 20), margin + 5, yPosition);
-                    doc.text(investment.type.substring(0, 15), margin + 70, yPosition);
-                    doc.text(`R$ ${this.app.formatCurrency(investment.value)}`, margin + 120, yPosition);
-                    doc.text(`R$ ${this.app.formatCurrency(currentValue)}`, pageWidth - margin - 30, yPosition);
-                    
-                    // Colorir rentabilidade
-                    if (profit >= 0) {
-                        doc.setTextColor(0, 150, 0); // Verde para positivo
-                    } else {
-                        doc.setTextColor(200, 0, 0); // Vermelho para negativo
-                    }
-                    doc.text(`${profitPercentage.toFixed(1)}%`, pageWidth - margin - 5, yPosition, { align: 'right' });
-                    
-                    doc.setTextColor(0, 0, 0); // Resetar cor
-                    
-                    yPosition += 8;
-                    
-                    // Verificar se precisa de nova página
-                    if (yPosition > 270 && index < investments.length - 1) {
-                        doc.addPage();
-                        yPosition = 20;
-                    }
-                });
-                
-                yPosition += 10;
-            }
-            
-            // 6. ALERTAS E LIMITES
-            if (limits.length > 0) {
-                doc.setFontSize(16);
-                doc.setFont('helvetica', 'bold');
-                doc.text('ALERTAS E LIMITES CONFIGURADOS', margin, yPosition);
-                
-                yPosition += 10;
-                
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'normal');
-                
-                limits.forEach((limit, index) => {
-                    const spent = this.app.database.getCategorySpentThisMonth(limit.category);
-                    const percentage = (spent / limit.limit) * 100;
-                    
-                    doc.text(`• ${limit.category}:`, margin + 5, yPosition);
-                    doc.text(`Limite: R$ ${this.app.formatCurrency(limit.limit)}`, margin + 50, yPosition);
-                    doc.text(`Gasto: R$ ${this.app.formatCurrency(spent)} (${percentage.toFixed(1)}%)`, margin + 120, yPosition);
-                    
-                    // Indicador visual
-                    if (percentage > 100) {
-                        doc.setTextColor(200, 0, 0);
-                        doc.text('⛔ LIMITE ULTRAPASSADO', pageWidth - margin - 5, yPosition, { align: 'right' });
-                    } else if (percentage > 80) {
-                        doc.setTextColor(255, 140, 0);
-                        doc.text('⚠️ PRÓXIMO DO LIMITE', pageWidth - margin - 5, yPosition, { align: 'right' });
-                    } else {
-                        doc.setTextColor(0, 150, 0);
-                        doc.text('✅ DENTRO DO LIMITE', pageWidth - margin - 5, yPosition, { align: 'right' });
-                    }
-                    
-                    doc.setTextColor(0, 0, 0);
-                    yPosition += 8;
-                    
-                    // Verificar se precisa de nova página
-                    if (yPosition > 270 && index < limits.length - 1) {
-                        doc.addPage();
-                        yPosition = 20;
-                    }
-                });
-                
-                yPosition += 10;
-            }
-            
-            // 7. RECOMENDAÇÕES (se houver dados)
-            if (transactions.length > 5) {
-                doc.setFontSize(16);
-                doc.setFont('helvetica', 'bold');
-                doc.text('RECOMENDAÇÕES', margin, yPosition);
-                
-                yPosition += 10;
-                
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'normal');
-                
-                const recommendations = [];
-                
-                // Análise de gastos
-                const topExpenseCategory = sortedCategories.length > 0 ? sortedCategories[0] : null;
-                if (topExpenseCategory && (topExpenseCategory[1] / totalExpenses) > 0.4) {
-                    recommendations.push(`• A categoria "${topExpenseCategory[0]}" representa ${((topExpenseCategory[1] / totalExpenses) * 100).toFixed(1)}% dos seus gastos. Considere rever estes custos.`);
-                }
-                
-                // Análise de saldo
-                if (currentBalance < 0) {
-                    recommendations.push(`• Seu saldo atual é negativo (R$ ${this.app.formatCurrency(currentBalance)}). Recomendamos reduzir despesas ou aumentar receitas.`);
-                }
-                
-                // Análise de poupança
-                const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
-                if (savingsRate < 10 && savingsRate > 0) {
-                    recommendations.push(`• Sua taxa de poupança é de ${savingsRate.toFixed(1)}%. Recomenda-se economizar pelo menos 20% da renda.`);
-                } else if (savingsRate >= 20) {
-                    recommendations.push(`• Ótimo! Sua taxa de poupança é de ${savingsRate.toFixed(1)}%. Continue assim!`);
-                }
-                
-                // Análise de investimentos
-                const investmentRatio = totalIncome > 0 ? (totalInvestments / totalIncome) * 100 : 0;
-                if (investmentRatio < 5 && savingsRate > 15) {
-                    recommendations.push(`• Considere destinar parte da sua poupança para investimentos para fazer seu dinheiro trabalhar para você.`);
-                }
-                
-                // Adicionar recomendações
-                if (recommendations.length > 0) {
-                    recommendations.forEach((rec, index) => {
-                        const lines = doc.splitTextToSize(rec, contentWidth - 10);
-                        lines.forEach(line => {
-                            doc.text(line, margin + 5, yPosition);
-                            yPosition += 6;
-                        });
-                        yPosition += 4;
-                        
-                        // Verificar se precisa de nova página
-                        if (yPosition > 270 && index < recommendations.length - 1) {
-                            doc.addPage();
-                            yPosition = 20;
-                        }
-                    });
-                } else {
-                    doc.text('Seus hábitos financeiros estão saudáveis. Continue com o bom trabalho!', margin, yPosition);
-                    yPosition += 15;
-                }
-            }
-            
-            // 8. RODAPÉ
-            doc.setFontSize(8);
-            doc.setFont('helvetica', 'italic');
-            doc.setTextColor(100, 100, 100);
-            doc.text('Relatório gerado pelo Sistema de Finanças Pessoais v4.3', pageWidth / 2, 285, { align: 'center' });
-            doc.text('Confidencial - Uso interno', pageWidth / 2, 290, { align: 'center' });
-            
-            // Salvar PDF
-            doc.save(`relatorio_financeiro_completo_${new Date().toISOString().slice(0, 10)}.pdf`);
-            
-            this.app.showNotification('Relatório PDF gerado com sucesso!', 'success');
-            
-        } catch (error) {
-            console.error('Erro ao gerar relatório:', error);
-            this.app.showNotification(`Erro ao gerar relatório: ${error.message}`, 'error');
         }
+        
+        // 7. INVESTIMENTOS (se houver)
+        if (investments.length > 0) {
+            // Verificar espaço na página
+            if (yPosition > pageHeight - 50) {
+                doc.addPage('l');
+                yPosition = 20;
+            }
+            
+            // Título
+            doc.setTextColor(...darkColor);
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('INVESTIMENTOS', margin, yPosition);
+            yPosition += 8;
+            
+            // Calcular resumo
+            let totalInvested = 0, totalCurrentValue = 0;
+            investments.forEach(inv => {
+                totalInvested += inv.value;
+                totalCurrentValue += inv.currentValue || inv.value;
+            });
+            
+            const totalProfit = totalCurrentValue - totalInvested;
+            const totalProfitPercentage = totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0;
+            
+            // Resumo compacto
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...darkColor);
+            
+            doc.text('Total Investido:', margin + 5, yPosition + 5);
+            doc.text('Valor Atual:', margin + 70, yPosition + 5);
+            doc.text('Rentabilidade:', margin + 140, yPosition + 5);
+            
+            doc.setFont('helvetica', 'bold');
+            doc.text(`R$ ${this.app.formatCurrency(totalInvested)}`, margin + 40, yPosition + 5);
+            doc.text(`R$ ${this.app.formatCurrency(totalCurrentValue)}`, margin + 105, yPosition + 5);
+            
+            // Colorir rentabilidade
+            if (totalProfit >= 0) {
+                doc.setTextColor(...successColor);
+            } else {
+                doc.setTextColor(...dangerColor);
+            }
+            doc.text(`${totalProfit >= 0 ? '+' : ''}${totalProfitPercentage.toFixed(2)}%`, 
+                    margin + 175, yPosition + 5);
+            
+            yPosition += 12;
+            
+            // Cabeçalho da tabela de investimentos (apenas top 5)
+            const topInvestments = investments.slice(0, 5);
+            
+            doc.setFillColor(...primaryColor);
+            doc.roundedRect(margin, yPosition, contentWidth, 8, 2, 2, 'F');
+            
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(7); // Fonte menor para caber
+            doc.setFont('helvetica', 'bold');
+            
+            doc.text('INVESTIMENTO', margin + 5, yPosition + 5.5);
+            doc.text('TIPO', margin + 60, yPosition + 5.5);
+            doc.text('APORTE', margin + 90, yPosition + 5.5);
+            doc.text('ATUAL', margin + 130, yPosition + 5.5);
+            doc.text('RENTAB.', pageWidth - margin - 5, yPosition + 5.5, { align: 'right' });
+            
+            yPosition += 8;
+            
+            // Linhas da tabela
+            topInvestments.forEach((investment, index) => {
+                const currentValue = investment.currentValue || investment.value;
+                const profit = currentValue - investment.value;
+                const profitPercentage = investment.value > 0 ? (profit / investment.value) * 100 : 0;
+                
+                // Verificar espaço
+                if (yPosition > pageHeight - 20) {
+                    doc.addPage('l');
+                    yPosition = 20;
+                    
+                    // Re-print cabeçalho
+                    doc.setFillColor(...primaryColor);
+                    doc.roundedRect(margin, yPosition, contentWidth, 8, 2, 2, 'F');
+                    
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFontSize(7);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('INVESTIMENTO', margin + 5, yPosition + 5.5);
+                    doc.text('TIPO', margin + 60, yPosition + 5.5);
+                    doc.text('APORTE', margin + 90, yPosition + 5.5);
+                    doc.text('ATUAL', margin + 130, yPosition + 5.5);
+                    doc.text('RENTAB.', pageWidth - margin - 5, yPosition + 5.5, { align: 'right' });
+                    
+                    yPosition += 8;
+                }
+                
+                // Alternar cores
+                if (index % 2 === 0) {
+                    doc.setFillColor(255, 255, 255);
+                } else {
+                    doc.setFillColor(...lightGray);
+                }
+                doc.rect(margin, yPosition, contentWidth, 8, 'F');
+                
+                doc.setFontSize(7);
+                doc.setFont('helvetica', 'normal');
+                
+                // Nome (truncado)
+                const nomeAbrev = investment.name.length > 15 ? 
+                    investment.name.substring(0, 15) + '...' : investment.name;
+                doc.setTextColor(...darkColor);
+                doc.text(nomeAbrev, margin + 5, yPosition + 5.5);
+                
+                // Tipo
+                doc.text(investment.type.substring(0, 10), margin + 60, yPosition + 5.5);
+                
+                // Aporte
+                doc.text(`R$ ${this.app.formatCurrency(investment.value)}`, margin + 90, yPosition + 5.5);
+                
+                // Valor atual
+                doc.text(`R$ ${this.app.formatCurrency(currentValue)}`, margin + 130, yPosition + 5.5);
+                
+                // Rentabilidade com cor
+                if (profit >= 0) {
+                    doc.setTextColor(...successColor);
+                } else {
+                    doc.setTextColor(...dangerColor);
+                }
+                doc.text(`${profit >= 0 ? '+' : ''}${profitPercentage.toFixed(1)}%`, 
+                        pageWidth - margin - 5, yPosition + 5.5, { align: 'right' });
+                
+                yPosition += 8;
+            });
+            
+            yPosition += 10;
+        }
+        
+        // 8. RECOMENDAÇÕES E CONSIDERAÇÕES - NOVA SEÇÃO
+        if (yPosition > pageHeight - 70) {
+            doc.addPage('l');
+            yPosition = 20;
+        }
+        
+        // Título
+        doc.setTextColor(...darkColor);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('RECOMENDAÇÕES E CONSIDERAÇÕES', margin, yPosition);
+        yPosition += 10;
+        
+        // Fundo para recomendações
+        doc.setFillColor(...lightGray);
+        doc.roundedRect(margin, yPosition, contentWidth, 45, 3, 3, 'F');
+        
+        // Calcular top categorias de despesas para recomendações
+        let recommendations = [];
+        
+        // 1. Análise de categorias
+        if (sortedCategories.length > 0) {
+            const topCategory = sortedCategories[0];
+            const topCategoryPercentage = totalExpenses > 0 ? (topCategory[1] / totalExpenses) * 100 : 0;
+            
+            if (topCategoryPercentage > 40) {
+                recommendations.push(`A categoria "${topCategory[0]}" representa ${topCategoryPercentage.toFixed(1)}% dos seus gastos. Considere rever esses custos.`);
+            } else if (topCategoryPercentage > 25) {
+                recommendations.push(`Sua maior categoria de gastos é "${topCategory[0]}" (${topCategoryPercentage.toFixed(1)}% do total).`);
+            }
+        }
+        
+        // 2. Análise de saldo
+        if (currentBalance < 0) {
+            recommendations.push(`ATENÇÃO: Seu saldo atual é negativo (R$ ${this.app.formatCurrency(Math.abs(currentBalance))}). Recomenda-se revisar despesas e aumentar receitas.`);
+        } else if (currentBalance < totalExpenses * 0.1) {
+            recommendations.push(`Seu saldo é positivo mas representa apenas ${(currentBalance/totalExpenses*100).toFixed(1)}% das despesas. Considere aumentar sua reserva.`);
+        } else {
+            recommendations.push(`Parabéns! Seu saldo é positivo (R$ ${this.app.formatCurrency(currentBalance)}). Continue mantendo o controle financeiro.`);
+        }
+        
+        // 3. Análise de alertas
+        if (alerts.length > 0) {
+            const ultrapassados = alerts.filter(a => a.type === 'danger').length;
+            const atencao = alerts.filter(a => a.type === 'warning').length;
+            
+            if (ultrapassados > 0) {
+                recommendations.push(`${ultrapassados} categoria(s) ultrapassou(aram) o limite estabelecido. Revise seus limites ou reduza gastos nessas áreas.`);
+            }
+            if (atencao > 0) {
+                recommendations.push(`${atencao} categoria(s) está(ão) próxima(s) do limite. Fique atento para não ultrapassar.`);
+            }
+        } else if (limits.length > 0) {
+            recommendations.push('Todas as categorias com limite estão dentro do estabelecido. Excelente controle!');
+        }
+        
+        // 4. Análise de investimentos
+        if (investments.length > 0) {
+            recommendations.push(`Você possui ${investments.length} investimento(s) totalizando R$ ${this.app.formatCurrency(totalInvestments)}.`);
+        } else {
+            recommendations.push('Considere começar a investir parte do seu saldo para multiplicar seu patrimônio.');
+        }
+        
+        // 5. Recomendação geral baseada na proporção receita/despesa
+        const savingRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
+        if (savingRate < 10) {
+            recommendations.push(`Sua taxa de poupança é de apenas ${savingRate.toFixed(1)}%. Recomenda-se economizar pelo menos 20% da receita.`);
+        } else if (savingRate >= 20) {
+            recommendations.push(`Excelente! Sua taxa de poupança é de ${savingRate.toFixed(1)}%. Continue assim!`);
+        }
+        
+        // Escrever recomendações
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...darkColor);
+        
+        let recY = yPosition + 8;
+        recommendations.forEach((rec, index) => {
+            if (index < 6) { // Limitar a 6 recomendações
+                // Adicionar marcador
+                doc.setFillColor(...primaryColor);
+                doc.circle(margin + 5, recY - 2.5, 1.5, 'F');
+                
+                // Texto da recomendação (quebrar linha se necessário)
+                const maxWidth = contentWidth - 15;
+                const lines = doc.splitTextToSize(rec, maxWidth);
+                
+                lines.forEach((line, lineIndex) => {
+                    doc.text(line, margin + 12, recY + (lineIndex * 4.5));
+                });
+                
+                recY += (lines.length * 4.5) + 2;
+            }
+        });
+        
+        yPosition += 50;
+        
+        // 9. RODAPÉ
+        doc.setFillColor(...darkColor);
+        doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
+        
+        doc.setTextColor(200, 200, 200);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.text(`Página ${i} de ${pageCount}`, pageWidth - margin, pageHeight - 9, { align: 'right' });
+            doc.text('Sistema Financeiro v4.3', margin, pageHeight - 9);
+        }
+        
+        // Salvar PDF
+        const fileName = `Relatorio_Financeiro_${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}.pdf`;
+        doc.save(fileName);
+        
+        this.app.showNotification('Relatório gerado com sucesso!', 'success');
+        
+    } catch (error) {
+        console.error('Erro ao gerar relatório:', error);
+        this.app.showNotification(`Erro ao gerar relatório: ${error.message}`, 'error');
     }
+}
 
     async generateBackup() {
         try {
