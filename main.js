@@ -144,6 +144,10 @@ class AppController {
             document.getElementById('customDateRange').style.display = 
                 e.target.value === 'custom' ? 'block' : 'none';
         });
+         // NOVA FUNÇÃO: Exportar relatório completo
+        document.getElementById('exportReportBtn')?.addEventListener('click', () => {
+            this.importExportService.exportCompleteReport();
+        });
 
         // Configurações
         document.getElementById('addTypeBtn')?.addEventListener('click', () => this.settingsManager.addType());
@@ -1744,7 +1748,7 @@ class DatabaseService {
 }
 
 // ============================================
-// CLASSE: SettingsManager
+// CLASSE: SettingsManager - VERSÃO COMPLETA ATUALIZADA
 // ============================================
 class SettingsManager {
     constructor(database, app) {
@@ -1784,7 +1788,6 @@ class SettingsManager {
 
     /**
      * Obtém configurações do banco de dados
-     * @returns {Promise<Array>} Lista de configurações
      */
     async getSettings() {
         try {
@@ -1798,14 +1801,12 @@ class SettingsManager {
             return settings;
         } catch (error) {
             console.error('Error loading settings from database:', error);
-            // Fallback para configurações em cache
             return this.getAllSettingsAsArray();
         }
     }
 
     /**
      * Retorna todas as configurações como array (fallback)
-     * @returns {Array} Configurações combinadas
      */
     getAllSettingsAsArray() {
         return [
@@ -1838,6 +1839,7 @@ class SettingsManager {
             { type: 'category', name: 'Outros', parentType: 'Despesa' },
             { type: 'category', name: 'Renda Fixa', parentType: 'Investimento' },
             { type: 'category', name: 'Renda Variável', parentType: 'Investimento' },
+            { type: 'category', name: 'Serviços', parentType: 'Despesa' },
             { type: 'category', name: 'Fundo Imobiliário', parentType: 'Investimento' }
         ];
         
@@ -1880,30 +1882,43 @@ class SettingsManager {
         await this.populateCategoriesList();
         await this.populateClassificationsList();
         await this.populateTypeFilter();
+        
+        // Configurar listeners para edição e exclusão
+        this.setupSettingsEventListeners();
     }
 
     /**
-     * Popula lista de tipos
+     * Popula lista de tipos com botões de ação
      */
     async populateTypesList() {
         const container = document.getElementById('typesList');
         if (!container) return;
         
         let html = '';
-        this.settings.types.forEach(type => {
-            html += `
-                <div class="settings-item">
-                    <div class="settings-item-content">
-                        <div class="settings-item-name">${type.name}</div>
+        if (this.settings.types.length === 0) {
+            html = '<p style="color: var(--gray-color); padding: 20px; text-align: center;">Nenhum tipo configurado</p>';
+        } else {
+            this.settings.types.forEach(type => {
+                html += `
+                    <div class="settings-item" data-id="${type.id}" data-type="type">
+                        <div class="settings-item-content">
+                            <div class="settings-item-name">${type.name}</div>
+                            <div class="settings-item-subtitle">Tipo de Transação</div>
+                        </div>
+                        <div class="settings-item-actions" style="display: flex; gap: 8px;">
+                            <button class="btn-icon btn-edit edit-setting" data-id="${type.id}" data-type="type" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-icon btn-delete delete-setting" data-id="${type.id}" data-type="type" title="Excluir">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
-                    <button class="btn-icon btn-delete delete-type" data-id="${type.id}" title="Excluir">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            `;
-        });
+                `;
+            });
+        }
         
-        container.innerHTML = html || '<p style="color: var(--gray-color);">Nenhum tipo configurado</p>';
+        container.innerHTML = html;
     }
 
     /**
@@ -1921,21 +1936,30 @@ class SettingsManager {
         }
         
         let html = '';
-        filteredCategories.forEach(category => {
-            html += `
-                <div class="settings-item">
-                    <div class="settings-item-content">
-                        <div class="settings-item-name">${category.name}</div>
-                        <div class="settings-item-subtitle">Tipo: ${category.parentType}</div>
+        if (filteredCategories.length === 0) {
+            html = '<p style="color: var(--gray-color); padding: 20px; text-align: center;">Nenhuma categoria configurada</p>';
+        } else {
+            filteredCategories.forEach(category => {
+                html += `
+                    <div class="settings-item" data-id="${category.id}" data-type="category">
+                        <div class="settings-item-content">
+                            <div class="settings-item-name">${category.name}</div>
+                            <div class="settings-item-subtitle">Tipo: ${category.parentType}</div>
+                        </div>
+                        <div class="settings-item-actions" style="display: flex; gap: 8px;">
+                            <button class="btn-icon btn-edit edit-setting" data-id="${category.id}" data-type="category" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-icon btn-delete delete-setting" data-id="${category.id}" data-type="category" title="Excluir">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
-                    <button class="btn-icon btn-delete delete-category" data-id="${category.id}" title="Excluir">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            `;
-        });
+                `;
+            });
+        }
         
-        container.innerHTML = html || '<p style="color: var(--gray-color);">Nenhuma categoria configurada</p>';
+        container.innerHTML = html;
     }
 
     /**
@@ -1946,35 +1970,55 @@ class SettingsManager {
         if (!container) return;
         
         let html = '';
-        this.settings.classifications.forEach(classification => {
-            html += `
-                <div class="settings-item">
-                    <div class="settings-item-content">
-                        <div class="settings-item-name">${classification.name}</div>
+        if (this.settings.classifications.length === 0) {
+            html = '<p style="color: var(--gray-color); padding: 20px; text-align: center;">Nenhuma classificação configurada</p>';
+        } else {
+            this.settings.classifications.forEach(classification => {
+                html += `
+                    <div class="settings-item" data-id="${classification.id}" data-type="classification">
+                        <div class="settings-item-content">
+                            <div class="settings-item-name">${classification.name}</div>
+                            <div class="settings-item-subtitle">Classificação</div>
+                        </div>
+                        <div class="settings-item-actions" style="display: flex; gap: 8px;">
+                            <button class="btn-icon btn-edit edit-setting" data-id="${classification.id}" data-type="classification" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-icon btn-delete delete-setting" data-id="${classification.id}" data-type="classification" title="Excluir">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
-                    <button class="btn-icon btn-delete delete-classification" data-id="${classification.id}" title="Excluir">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            `;
-        });
+                `;
+            });
+        }
         
-        container.innerHTML = html || '<p style="color: var(--gray-color);">Nenhuma classificação configurada</p>';
+        container.innerHTML = html;
     }
 
     /**
-     * Popula filtro de tipo
+     * Popula filtro de tipo e select do formulário
      */
     async populateTypeFilter() {
         const filter = document.getElementById('categoryTypeFilter');
-        if (!filter) return;
+        const newCategoryType = document.getElementById('newCategoryType');
         
-        let html = '<option value="">Todos os tipos</option>';
-        this.settings.types.forEach(type => {
-            html += `<option value="${type.name}">${type.name}</option>`;
-        });
+        if (filter) {
+            let html = '<option value="">Todos os tipos</option>';
+            this.settings.types.forEach(type => {
+                html += `<option value="${type.name}">${type.name}</option>`;
+            });
+            filter.innerHTML = html;
+        }
         
-        filter.innerHTML = html;
+        // Popular também o select do formulário de nova categoria
+        if (newCategoryType) {
+            let html = '<option value="">Selecione o tipo</option>';
+            this.settings.types.forEach(type => {
+                html += `<option value="${type.name}">${type.name}</option>`;
+            });
+            newCategoryType.innerHTML = html;
+        }
     }
 
     /**
@@ -1985,17 +2029,421 @@ class SettingsManager {
     }
 
     /**
+     * Configura listeners para edição e exclusão
+     */
+    setupSettingsEventListeners() {
+        // Usar delegação de eventos para elementos dinâmicos
+        document.addEventListener('click', async (e) => {
+            // Botões de edição
+            const editBtn = e.target.closest('.edit-setting');
+            if (editBtn) {
+                e.preventDefault();
+                const id = parseInt(editBtn.getAttribute('data-id'));
+                const type = editBtn.getAttribute('data-type');
+                this.enableEditMode(id, type);
+                return;
+            }
+            
+            // Botões de exclusão
+            const deleteBtn = e.target.closest('.delete-setting');
+            if (deleteBtn) {
+                e.preventDefault();
+                const id = parseInt(deleteBtn.getAttribute('data-id'));
+                const type = deleteBtn.getAttribute('data-type');
+                await this.confirmDelete(id, type);
+                return;
+            }
+            
+            // Botões de salvar edição
+            const saveBtn = e.target.closest('.save-edit');
+            if (saveBtn) {
+                e.preventDefault();
+                const id = parseInt(saveBtn.getAttribute('data-id'));
+                const type = saveBtn.getAttribute('data-type');
+                await this.saveEdit(id, type);
+                return;
+            }
+            
+            // Botões de cancelar edição
+            const cancelBtn = e.target.closest('.cancel-edit');
+            if (cancelBtn) {
+                e.preventDefault();
+                const type = cancelBtn.getAttribute('data-type');
+                await this.cancelEdit(type);
+                return;
+            }
+        });
+    }
+
+    /**
+     * Habilita modo de edição para um item
+     */
+    enableEditMode(id, type) {
+        let item;
+        let settingsList;
+        
+        switch(type) {
+            case 'type':
+                item = this.settings.types.find(t => t.id === id);
+                settingsList = 'typesList';
+                break;
+            case 'category':
+                item = this.settings.categories.find(c => c.id === id);
+                settingsList = 'categoriesList';
+                break;
+            case 'classification':
+                item = this.settings.classifications.find(c => c.id === id);
+                settingsList = 'classificationsList';
+                break;
+            default:
+                return;
+        }
+        
+        if (!item) return;
+        
+        const container = document.getElementById(settingsList);
+        if (!container) return;
+        
+        const itemElement = container.querySelector(`[data-id="${id}"]`);
+        if (!itemElement) return;
+        
+        let editHtml = '';
+        
+        switch(type) {
+            case 'type':
+                editHtml = this.getTypeEditHtml(item);
+                break;
+            case 'category':
+                editHtml = this.getCategoryEditHtml(item);
+                break;
+            case 'classification':
+                editHtml = this.getClassificationEditHtml(item);
+                break;
+        }
+        
+        itemElement.innerHTML = editHtml;
+        
+        // Focar no campo de edição
+        const input = itemElement.querySelector('input, select');
+        if (input) {
+            input.focus();
+            if (input.tagName === 'INPUT') {
+                input.select();
+            }
+        }
+    }
+
+    /**
+     * Retorna HTML para edição de tipo
+     */
+    getTypeEditHtml(type) {
+        return `
+            <div class="settings-item-content" style="flex: 1;">
+                <input type="text" class="settings-edit-input" value="${type.name}" 
+                       placeholder="Nome do tipo" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid var(--primary-color);">
+            </div>
+            <div class="settings-item-actions" style="display: flex; gap: 8px;">
+                <button class="btn-icon btn-success save-edit" data-id="${type.id}" data-type="type" title="Salvar">
+                    <i class="fas fa-check"></i>
+                </button>
+                <button class="btn-icon btn-outline cancel-edit" data-type="type" title="Cancelar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+    }
+
+    /**
+     * Retorna HTML para edição de categoria
+     */
+    getCategoryEditHtml(category) {
+        // Gerar opções de tipos
+        let typeOptions = '';
+        this.settings.types.forEach(type => {
+            const selected = type.name === category.parentType ? 'selected' : '';
+            typeOptions += `<option value="${type.name}" ${selected}>${type.name}</option>`;
+        });
+        
+        return `
+            <div class="settings-item-content" style="flex: 1;">
+                <div style="margin-bottom: 10px;">
+                    <input type="text" class="settings-edit-input" value="${category.name}" 
+                           placeholder="Nome da categoria" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid var(--primary-color);">
+                </div>
+                <div>
+                    <select class="settings-edit-select" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid var(--primary-color);">
+                        <option value="">Selecione o tipo</option>
+                        ${typeOptions}
+                    </select>
+                </div>
+            </div>
+            <div class="settings-item-actions" style="display: flex; gap: 8px;">
+                <button class="btn-icon btn-success save-edit" data-id="${category.id}" data-type="category" title="Salvar">
+                    <i class="fas fa-check"></i>
+                </button>
+                <button class="btn-icon btn-outline cancel-edit" data-type="category" title="Cancelar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+    }
+
+    /**
+     * Retorna HTML para edição de classificação
+     */
+    getClassificationEditHtml(classification) {
+        return `
+            <div class="settings-item-content" style="flex: 1;">
+                <input type="text" class="settings-edit-input" value="${classification.name}" 
+                       placeholder="Nome da classificação" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid var(--primary-color);">
+            </div>
+            <div class="settings-item-actions" style="display: flex; gap: 8px;">
+                <button class="btn-icon btn-success save-edit" data-id="${classification.id}" data-type="classification" title="Salvar">
+                    <i class="fas fa-check"></i>
+                </button>
+                <button class="btn-icon btn-outline cancel-edit" data-type="classification" title="Cancelar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+    }
+
+    /**
+     * Salva edição de um item
+     */
+    async saveEdit(id, type) {
+        let container;
+        let itemElement;
+        let updates = {};
+        
+        switch(type) {
+            case 'type':
+                container = document.getElementById('typesList');
+                itemElement = container?.querySelector(`[data-id="${id}"]`);
+                if (!itemElement) return;
+                
+                const typeInput = itemElement.querySelector('.settings-edit-input');
+                const newName = typeInput?.value.trim();
+                
+                if (!newName) {
+                    this.app.showNotification('O nome não pode estar vazio.', 'error');
+                    return;
+                }
+                
+                // Verificar se já existe
+                const existingType = this.settings.types.find(t => 
+                    t.name.toLowerCase() === newName.toLowerCase() && t.id !== id);
+                if (existingType) {
+                    this.app.showNotification('Já existe um tipo com esse nome.', 'error');
+                    return;
+                }
+                
+                updates = { name: newName };
+                break;
+                
+            case 'category':
+                container = document.getElementById('categoriesList');
+                itemElement = container?.querySelector(`[data-id="${id}"]`);
+                if (!itemElement) return;
+                
+                const catInput = itemElement.querySelector('.settings-edit-input');
+                const catSelect = itemElement.querySelector('.settings-edit-select');
+                const catName = catInput?.value.trim();
+                const parentType = catSelect?.value;
+                
+                if (!catName || !parentType) {
+                    this.app.showNotification('Preencha todos os campos.', 'error');
+                    return;
+                }
+                
+                // Verificar se já existe
+                const existingCategory = this.settings.categories.find(c => 
+                    c.name.toLowerCase() === catName.toLowerCase() && 
+                    c.parentType === parentType && 
+                    c.id !== id);
+                if (existingCategory) {
+                    this.app.showNotification('Já existe uma categoria com esse nome e tipo.', 'error');
+                    return;
+                }
+                
+                // Buscar ID do tipo
+                const typeObj = this.settings.types.find(t => t.name === parentType);
+                if (!typeObj) {
+                    this.app.showNotification('Tipo não encontrado.', 'error');
+                    return;
+                }
+                
+                updates = { 
+                    name: catName, 
+                    parentType: parentType,
+                    parentTypeId: typeObj.id 
+                };
+                break;
+                
+            case 'classification':
+                container = document.getElementById('classificationsList');
+                itemElement = container?.querySelector(`[data-id="${id}"]`);
+                if (!itemElement) return;
+                
+                const classInput = itemElement.querySelector('.settings-edit-input');
+                const className = classInput?.value.trim();
+                
+                if (!className) {
+                    this.app.showNotification('O nome não pode estar vazio.', 'error');
+                    return;
+                }
+                
+                // Verificar se já existe
+                const existingClass = this.settings.classifications.find(c => 
+                    c.name.toLowerCase() === className.toLowerCase() && c.id !== id);
+                if (existingClass) {
+                    this.app.showNotification('Já existe uma classificação com esse nome.', 'error');
+                    return;
+                }
+                
+                updates = { name: className };
+                break;
+        }
+        
+        try {
+            await this.database.updateSetting(id, updates);
+            
+            // Atualizar localmente
+            switch(type) {
+                case 'type':
+                    const typeIndex = this.settings.types.findIndex(t => t.id === id);
+                    if (typeIndex !== -1) {
+                        this.settings.types[typeIndex] = { ...this.settings.types[typeIndex], ...updates };
+                    }
+                    break;
+                case 'category':
+                    const catIndex = this.settings.categories.findIndex(c => c.id === id);
+                    if (catIndex !== -1) {
+                        this.settings.categories[catIndex] = { ...this.settings.categories[catIndex], ...updates };
+                    }
+                    break;
+                case 'classification':
+                    const classIndex = this.settings.classifications.findIndex(c => c.id === id);
+                    if (classIndex !== -1) {
+                        this.settings.classifications[classIndex] = { ...this.settings.classifications[classIndex], ...updates };
+                    }
+                    break;
+            }
+            
+            // Recarregar UI
+            await this.loadSettingsUI();
+            
+            // Atualizar selects dependentes
+            await this.updateAllSelects();
+            
+            this.app.showNotification(`${type === 'type' ? 'Tipo' : type === 'category' ? 'Categoria' : 'Classificação'} atualizado com sucesso!`, 'success');
+            
+        } catch (error) {
+            console.error(`Erro ao atualizar ${type}:`, error);
+            this.app.showNotification(`Erro ao atualizar: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * Cancela modo de edição
+     */
+    async cancelEdit(type) {
+        await this.loadSettingsUI();
+    }
+
+    /**
+     * Confirma exclusão de um item
+     */
+    async confirmDelete(id, type) {
+        let itemName = '';
+        let itemTypeName = '';
+        
+        switch(type) {
+            case 'type':
+                const typeItem = this.settings.types.find(t => t.id === id);
+                if (!typeItem) return;
+                itemName = typeItem.name;
+                itemTypeName = 'tipo';
+                
+                // Verificar se há categorias usando este tipo
+                const categoriesUsingType = this.settings.categories.filter(c => c.parentType === itemName);
+                if (categoriesUsingType.length > 0) {
+                    this.app.showNotification(
+                        `Não é possível excluir este tipo pois existem ${categoriesUsingType.length} categorias vinculadas a ele.`, 
+                        'error'
+                    );
+                    return;
+                }
+                break;
+                
+            case 'category':
+                const categoryItem = this.settings.categories.find(c => c.id === id);
+                if (!categoryItem) return;
+                itemName = categoryItem.name;
+                itemTypeName = 'categoria';
+                break;
+                
+            case 'classification':
+                const classItem = this.settings.classifications.find(c => c.id === id);
+                if (!classItem) return;
+                itemName = classItem.name;
+                itemTypeName = 'classificação';
+                break;
+        }
+        
+        const confirmMessage = `Deseja realmente excluir a ${itemTypeName} "${itemName}"?`;
+        
+        if (confirm(confirmMessage)) {
+            await this.deleteItem(id, type);
+        }
+    }
+
+    /**
+     * Exclui um item
+     */
+    async deleteItem(id, type) {
+        try {
+            await this.database.deleteSetting(id);
+            
+            // Remover localmente
+            switch(type) {
+                case 'type':
+                    this.settings.types = this.settings.types.filter(t => t.id !== id);
+                    break;
+                case 'category':
+                    this.settings.categories = this.settings.categories.filter(c => c.id !== id);
+                    break;
+                case 'classification':
+                    this.settings.classifications = this.settings.classifications.filter(c => c.id !== id);
+                    break;
+            }
+            
+            // Recarregar UI
+            await this.loadSettingsUI();
+            
+            // Atualizar selects dependentes
+            await this.updateAllSelects();
+            
+            this.app.showNotification(`${type === 'type' ? 'Tipo' : type === 'category' ? 'Categoria' : 'Classificação'} excluído com sucesso!`, 'success');
+            
+        } catch (error) {
+            console.error(`Erro ao excluir ${type}:`, error);
+            this.app.showNotification(`Erro ao excluir: ${error.message}`, 'error');
+        }
+    }
+
+    /**
      * Adiciona um novo tipo
      */
     async addType() {
         const input = document.getElementById('newType');
         const name = input.value.trim();
         
-        if (!name) {
-            this.app.showNotification('Digite um nome para o tipo.', 'error');
+        if (!this.validateName(name, 'tipo')) {
             return;
         }
         
+        // Verificar se já existe
         if (this.settings.types.some(t => t.name.toLowerCase() === name.toLowerCase())) {
             this.app.showNotification('Este tipo já existe.', 'error');
             return;
@@ -2008,11 +2456,8 @@ class SettingsManager {
             this.settings.types.push(newType);
             
             input.value = '';
-            await this.populateTypesList();
-            await this.populateTypeFilter();
-            
-            // Atualizar selects de tipo em todo o sistema
-            await this.updateAllTypeSelects();
+            await this.loadSettingsUI();
+            await this.updateAllSelects();
             
             this.app.showNotification('Tipo adicionado com sucesso!', 'success');
         } catch (error) {
@@ -2031,11 +2476,11 @@ class SettingsManager {
         const name = nameInput.value.trim();
         const parentType = typeInput.value;
         
-        if (!name || !parentType) {
-            this.app.showNotification('Preencha todos os campos.', 'error');
+        if (!this.validateName(name, 'categoria') || !this.validateParentType(parentType)) {
             return;
         }
         
+        // Verificar se já existe
         if (this.settings.categories.some(c => 
             c.name.toLowerCase() === name.toLowerCase() && c.parentType === parentType)) {
             this.app.showNotification('Esta categoria já existe para este tipo.', 'error');
@@ -2062,10 +2507,8 @@ class SettingsManager {
             this.settings.categories.push(newCategory);
             
             nameInput.value = '';
-            await this.populateCategoriesList();
-            
-            // Atualizar selects de categoria em todo o sistema
-            await this.updateAllCategorySelects();
+            await this.loadSettingsUI();
+            await this.updateAllSelects();
             
             this.app.showNotification('Categoria adicionada com sucesso!', 'success');
         } catch (error) {
@@ -2081,11 +2524,11 @@ class SettingsManager {
         const input = document.getElementById('newClassification');
         const name = input.value.trim();
         
-        if (!name) {
-            this.app.showNotification('Digite um nome para a classificação.', 'error');
+        if (!this.validateName(name, 'classificação')) {
             return;
         }
         
+        // Verificar se já existe
         if (this.settings.classifications.some(c => c.name.toLowerCase() === name.toLowerCase())) {
             this.app.showNotification('Esta classificação já existe.', 'error');
             return;
@@ -2098,10 +2541,8 @@ class SettingsManager {
             this.settings.classifications.push(newClassification);
             
             input.value = '';
-            await this.populateClassificationsList();
-            
-            // Atualizar selects de classificação em todo o sistema
-            await this.updateAllClassificationSelects();
+            await this.loadSettingsUI();
+            await this.updateAllSelects();
             
             this.app.showNotification('Classificação adicionada com sucesso!', 'success');
         } catch (error) {
@@ -2111,68 +2552,102 @@ class SettingsManager {
     }
 
     /**
-     * Exclui um tipo
+     * Valida nome de item
      */
-    async deleteType(id) {
-        try {
-            // Verificar se há categorias usando este tipo
-            const categoriesUsingType = this.settings.categories.filter(c => {
-                const type = this.settings.types.find(t => t.id === id);
-                return type && c.parentType === type.name;
-            });
-            
-            if (categoriesUsingType.length > 0) {
-                this.app.showNotification('Não é possível excluir este tipo pois existem categorias vinculadas a ele.', 'error');
-                return;
+    validateName(name, itemType) {
+        if (!name || !name.trim()) {
+            this.app.showNotification(`Digite um nome para a ${itemType}.`, 'error');
+            return false;
+        }
+        
+        if (name.length < 2) {
+            this.app.showNotification(`O nome da ${itemType} deve ter pelo menos 2 caracteres.`, 'error');
+            return false;
+        }
+        
+        if (name.length > 50) {
+            this.app.showNotification(`O nome da ${itemType} deve ter no máximo 50 caracteres.`, 'error');
+            return false;
+        }
+        
+        return true;
+    }
+
+    /**
+     * Valida tipo pai para categoria
+     */
+    validateParentType(parentType) {
+        if (!parentType) {
+            this.app.showNotification('Selecione um tipo para a categoria.', 'error');
+            return false;
+        }
+        
+        return true;
+    }
+
+    /**
+     * Atualiza todos os selects do sistema
+     */
+    async updateAllSelects() {
+        await this.updateAllTypeSelects();
+        await this.updateAllCategorySelects();
+        await this.updateAllClassificationSelects();
+    }
+
+    /**
+     * Atualiza todos os selects de tipo no sistema
+     */
+    async updateAllTypeSelects() {
+        const selects = [
+            document.getElementById('type'),
+            document.getElementById('editType'),
+            document.getElementById('filterType'),
+            document.getElementById('newCategoryType'),
+            document.getElementById('categoryTypeFilter')
+        ];
+        
+        for (const select of selects) {
+            if (select) {
+                const currentValue = select.value;
+                await this.populateTypeSelect(select, currentValue);
             }
-            
-            await this.database.deleteSetting(id);
-            this.settings.types = this.settings.types.filter(t => t.id !== id);
-            
-            await this.populateTypesList();
-            await this.populateTypeFilter();
-            await this.updateAllTypeSelects();
-            
-            this.app.showNotification('Tipo excluído com sucesso!', 'success');
-        } catch (error) {
-            console.error('Erro ao excluir tipo:', error);
-            this.app.showNotification('Erro ao excluir tipo: ' + error.message, 'error');
         }
     }
 
     /**
-     * Exclui uma categoria
+     * Atualiza todos os selects de categoria no sistema
      */
-    async deleteCategory(id) {
-        try {
-            await this.database.deleteSetting(id);
-            this.settings.categories = this.settings.categories.filter(c => c.id !== id);
-            
-            await this.populateCategoriesList();
-            await this.updateAllCategorySelects();
-            
-            this.app.showNotification('Categoria excluída com sucesso!', 'success');
-        } catch (error) {
-            console.error('Erro ao excluir categoria:', error);
-            this.app.showNotification('Erro ao excluir categoria: ' + error.message, 'error');
+    async updateAllCategorySelects() {
+        const selects = [
+            document.getElementById('category'),
+            document.getElementById('editCategory'),
+            document.getElementById('filterCategory')
+        ];
+        
+        for (const select of selects) {
+            if (select) {
+                const typeSelectId = select.id === 'editCategory' ? 'editType' : 'type';
+                const typeSelect = document.getElementById(typeSelectId);
+                const type = typeSelect ? typeSelect.value : '';
+                const currentValue = select.value;
+                await this.populateCategorySelect(select, type, currentValue);
+            }
         }
     }
 
     /**
-     * Exclui uma classificação
+     * Atualiza todos os selects de classificação no sistema
      */
-    async deleteClassification(id) {
-        try {
-            await this.database.deleteSetting(id);
-            this.settings.classifications = this.settings.classifications.filter(c => c.id !== id);
-            
-            await this.populateClassificationsList();
-            await this.updateAllClassificationSelects();
-            
-            this.app.showNotification('Classificação excluída com sucesso!', 'success');
-        } catch (error) {
-            console.error('Erro ao excluir classificação:', error);
-            this.app.showNotification('Erro ao excluir classificação: ' + error.message, 'error');
+    async updateAllClassificationSelects() {
+        const selects = [
+            document.getElementById('classification')
+        ];
+        
+        for (const select of selects) {
+            if (select) {
+                const currentValue = select.value;
+                await this.populateClassificationSelect(select, currentValue);
+            }
         }
     }
 
@@ -2251,61 +2726,6 @@ class SettingsManager {
     }
 
     /**
-     * Atualiza todos os selects de tipo no sistema
-     */
-    async updateAllTypeSelects() {
-        const selects = [
-            document.getElementById('type'),
-            document.getElementById('editType'),
-            document.getElementById('filterType'),
-            document.getElementById('newCategoryType')
-        ];
-        
-        for (const select of selects) {
-            if (select) {
-                const currentValue = select.value;
-                await this.populateTypeSelect(select, currentValue);
-            }
-        }
-    }
-
-    /**
-     * Atualiza todos os selects de categoria no sistema
-     */
-    async updateAllCategorySelects() {
-        const selects = [
-            document.getElementById('category'),
-            document.getElementById('editCategory'),
-            document.getElementById('filterCategory')
-        ];
-        
-        for (const select of selects) {
-            if (select) {
-                const typeSelect = document.getElementById(select.id === 'editCategory' ? 'editType' : 'type');
-                const type = typeSelect ? typeSelect.value : '';
-                const currentValue = select.value;
-                await this.populateCategorySelect(select, type, currentValue);
-            }
-        }
-    }
-
-    /**
-     * Atualiza todos os selects de classificação no sistema
-     */
-    async updateAllClassificationSelects() {
-        const selects = [
-            document.getElementById('classification')
-        ];
-        
-        for (const select of selects) {
-            if (select) {
-                const currentValue = select.value;
-                await this.populateClassificationSelect(select, currentValue);
-            }
-        }
-    }
-
-    /**
      * Obtém todos os tipos
      */
     getTypes() {
@@ -2326,6 +2746,27 @@ class SettingsManager {
      */
     getClassifications() {
         return this.settings.classifications.map(c => c.name);
+    }
+
+    /**
+     * Busca um tipo pelo ID
+     */
+    getTypeById(id) {
+        return this.settings.types.find(t => t.id === id);
+    }
+
+    /**
+     * Busca uma categoria pelo ID
+     */
+    getCategoryById(id) {
+        return this.settings.categories.find(c => c.id === id);
+    }
+
+    /**
+     * Busca uma classificação pelo ID
+     */
+    getClassificationById(id) {
+        return this.settings.classifications.find(c => c.id === id);
     }
 }
 
@@ -2909,61 +3350,151 @@ class ChartsController {
         }
     }
 
-    async updateExpensesChart() {
-        try {
-            const expensesByCategory = await this.database.getExpensesByCategory();
-            const categories = Object.keys(expensesByCategory);
-            const values = Object.values(expensesByCategory);
-            
-            if (categories.length === 0 || values.length === 0) {
-                if (this.charts.expenses) {
-                    this.charts.expenses.destroy();
-                    this.charts.expenses = null;
-                }
-                return;
+    // main.js - Na classe ChartsController, MODIFIQUE o método updateExpensesChart():
+async updateExpensesChart() {
+    try {
+        const expensesByCategory = await this.database.getExpensesByCategory();
+        const categories = Object.keys(expensesByCategory);
+        const values = Object.values(expensesByCategory);
+        
+        if (categories.length === 0 || values.length === 0) {
+            if (this.charts.expenses) {
+                this.charts.expenses.destroy();
+                this.charts.expenses = null;
             }
+            return;
+        }
+        
+        const canvas = document.getElementById('expensesChart');
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d');
+        
+        if (this.charts.expenses) {
+            this.charts.expenses.destroy();
+        }
+        
+        // CORREÇÃO: Obter cor do texto baseado no tema
+        const isDarkMode = document.body.classList.contains('dark-mode');
+        const textColor = isDarkMode ? '#e9ecef' : '#212529';
+        const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+        
+        this.charts.expenses = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: categories,
+                datasets: [{
+                    data: values,
+                    backgroundColor: this.generateColors(categories.length),
+                    borderWidth: 1,
+                    borderColor: getComputedStyle(document.documentElement).getPropertyValue('--light-color')
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            color: textColor, // CORREÇÃO: Usar cor dinâmica
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return `${label}: R$ ${value.toFixed(2)} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Erro ao atualizar gráfico de despesas:', error);
+    }
+}
+
+    // ADIÇÃO: Modificar também o método updateIncomeVsExpensesChart():
+    async updateIncomeVsExpensesChart() {
+        try {
+            const totals = await this.database.getFinancialTotals();
             
-            const canvas = document.getElementById('expensesChart');
+            const canvas = document.getElementById('incomeVsExpensesChart');
             if (!canvas) return;
             
             const ctx = canvas.getContext('2d');
             
-            if (this.charts.expenses) {
-                this.charts.expenses.destroy();
+            if (this.charts.incomeVsExpenses) {
+                this.charts.incomeVsExpenses.destroy();
             }
             
-            this.charts.expenses = new Chart(ctx, {
-                type: 'doughnut',
+            // CORREÇÃO: Obter cor do texto baseado no tema
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            const textColor = isDarkMode ? '#e9ecef' : '#212529';
+            const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+            
+            this.charts.incomeVsExpenses = new Chart(ctx, {
+                type: 'bar',
                 data: {
-                    labels: categories,
+                    labels: ['Receitas', 'Despesas', 'Investimentos'],
                     datasets: [{
-                        data: values,
-                        backgroundColor: this.generateColors(categories.length),
-                        borderWidth: 1,
-                        borderColor: getComputedStyle(document.documentElement).getPropertyValue('--light-color')
+                        label: 'Valores (R$)',
+                        data: [totals.totalIncome, totals.totalExpenses, totals.totalInvestments],
+                        backgroundColor: [
+                            'rgba(76, 201, 240, 0.7)',
+                            'rgba(247, 37, 133, 0.7)',
+                            'rgba(67, 97, 238, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgb(76, 201, 240)',
+                            'rgb(247, 37, 133)',
+                            'rgb(67, 97, 238)'
+                        ],
+                        borderWidth: 1
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'right',
-                            labels: {
-                                color: getComputedStyle(document.documentElement).getPropertyValue('--dark-color'),
-                                font: {
-                                    size: 12
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: textColor, // CORREÇÃO: Usar cor dinâmica
+                                callback: function(value) {
+                                    return 'R$ ' + value.toLocaleString('pt-BR', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2
+                                    });
                                 }
+                            },
+                            grid: {
+                                color: gridColor // CORREÇÃO: Usar cor dinâmica
                             }
                         },
+                        x: {
+                            ticks: {
+                                color: textColor // CORREÇÃO: Usar cor dinâmica
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    const label = context.label || '';
-                                    const value = context.raw || 0;
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = Math.round((value / total) * 100);
-                                    return `${label}: R$ ${value.toFixed(2)} (${percentage}%)`;
+                                    return `R$ ${context.raw.toFixed(2)}`;
                                 }
                             }
                         }
@@ -2971,7 +3502,7 @@ class ChartsController {
                 }
             });
         } catch (error) {
-            console.error('Erro ao atualizar gráfico de despesas:', error);
+            console.error('Erro ao atualizar gráfico receita vs despesa:', error);
         }
     }
 
@@ -3968,6 +4499,440 @@ class ImportExportService {
         doc.save(`relatorio_financeiro_${new Date().toISOString().slice(0, 10)}.pdf`);
         
         this.app.showNotification('Exportação PDF concluída!', 'success');
+    }
+
+    // main.js - Na classe ImportExportService, ADICIONE este método:
+    async exportCompleteReport() {
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            
+            // Configurações gerais
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const margin = 20;
+            const contentWidth = pageWidth - (2 * margin);
+            
+            // Data do relatório
+            const reportDate = new Date().toLocaleDateString('pt-BR');
+            
+            // 1. CABEÇALHO
+            doc.setFillColor(67, 97, 238);
+            doc.rect(0, 0, pageWidth, 40, 'F');
+            
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(24);
+            doc.setFont('helvetica', 'bold');
+            doc.text('RELATÓRIO FINANCEIRO', pageWidth / 2, 25, { align: 'center' });
+            
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Gerado em: ${reportDate}`, pageWidth / 2, 33, { align: 'center' });
+            
+            let yPosition = 50;
+            
+            // 2. RESUMO EXECUTIVO
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.text('RESUMO EXECUTIVO', margin, yPosition);
+            
+            yPosition += 10;
+            
+            // Obter dados
+            const transactions = await this.database.getAllTransactions();
+            const investments = await this.database.getAllInvestments();
+            const limits = await this.database.getAllLimits();
+            
+            // Calcular totais
+            let totalIncome = 0;
+            let totalExpenses = 0;
+            let totalInvestments = 0;
+            const categoryTotals = {};
+            const monthlyTotals = {};
+            
+            transactions.forEach(transaction => {
+                if (transaction.type === 'Receita') {
+                    totalIncome += transaction.value;
+                } else if (transaction.type === 'Despesa') {
+                    totalExpenses += transaction.value;
+                    
+                    // Acumular por categoria
+                    if (!categoryTotals[transaction.category]) {
+                        categoryTotals[transaction.category] = 0;
+                    }
+                    categoryTotals[transaction.category] += transaction.value;
+                    
+                    // Acumular por mês
+                    const monthKey = `${transaction.month}/${transaction.year}`;
+                    if (!monthlyTotals[monthKey]) {
+                        monthlyTotals[monthKey] = { income: 0, expenses: 0 };
+                    }
+                    monthlyTotals[monthKey].expenses += transaction.value;
+                } else if (transaction.type === 'Investimento') {
+                    totalInvestments += transaction.value;
+                }
+                
+                // Para receitas também acumular por mês
+                if (transaction.type === 'Receita') {
+                    const monthKey = `${transaction.month}/${transaction.year}`;
+                    if (!monthlyTotals[monthKey]) {
+                        monthlyTotals[monthKey] = { income: 0, expenses: 0 };
+                    }
+                    monthlyTotals[monthKey].income += transaction.value;
+                }
+            });
+            
+            const currentBalance = totalIncome - totalExpenses;
+            
+            // Resumo em tabela
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            
+            const summaryData = [
+                ['RECEITAS TOTAIS', `R$ ${this.app.formatCurrency(totalIncome)}`],
+                ['DESPESAS TOTAIS', `R$ ${this.app.formatCurrency(totalExpenses)}`],
+                ['SALDO ATUAL', `R$ ${this.app.formatCurrency(currentBalance)}`],
+                ['INVESTIMENTOS', `R$ ${this.app.formatCurrency(totalInvestments)}`],
+                ['TOTAL DE TRANSAÇÕES', transactions.length.toString()],
+                ['TOTAL DE INVESTIMENTOS', investments.length.toString()]
+            ];
+            
+            summaryData.forEach((row, index) => {
+                const y = yPosition + (index * 8);
+                doc.text(row[0], margin, y);
+                doc.text(row[1], pageWidth - margin, y, { align: 'right' });
+                
+                // Linha divisória
+                if (index === 2) {
+                    doc.setDrawColor(200, 200, 200);
+                    doc.line(margin, y + 3, pageWidth - margin, y + 3);
+                }
+            });
+            
+            yPosition += (summaryData.length * 8) + 15;
+            
+            // 3. DESPESAS POR CATEGORIA (Top 10)
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.text('DESPESAS POR CATEGORIA', margin, yPosition);
+            
+            yPosition += 10;
+            
+            // Ordenar categorias por valor
+            const sortedCategories = Object.entries(categoryTotals)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+            
+            if (sortedCategories.length > 0) {
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                
+                // Cabeçalho da tabela
+                doc.setFillColor(240, 240, 240);
+                doc.rect(margin, yPosition - 5, contentWidth, 8, 'F');
+                
+                doc.setFont('helvetica', 'bold');
+                doc.text('CATEGORIA', margin + 5, yPosition);
+                doc.text('VALOR', pageWidth - margin - 30, yPosition);
+                doc.text('%', pageWidth - margin - 5, yPosition, { align: 'right' });
+                
+                yPosition += 8;
+                
+                // Linhas da tabela
+                sortedCategories.forEach(([category, value], index) => {
+                    const percentage = (value / totalExpenses) * 100;
+                    
+                    // Alternar cores das linhas
+                    if (index % 2 === 0) {
+                        doc.setFillColor(250, 250, 250);
+                    } else {
+                        doc.setFillColor(245, 245, 245);
+                    }
+                    doc.rect(margin, yPosition - 4, contentWidth, 8, 'F');
+                    
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(category, margin + 5, yPosition);
+                    doc.text(`R$ ${this.app.formatCurrency(value)}`, pageWidth - margin - 30, yPosition);
+                    doc.text(`${percentage.toFixed(1)}%`, pageWidth - margin - 5, yPosition, { align: 'right' });
+                    
+                    yPosition += 8;
+                    
+                    // Verificar se precisa de nova página
+                    if (yPosition > 270 && index < sortedCategories.length - 1) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                });
+                
+                yPosition += 10;
+            } else {
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'italic');
+                doc.text('Nenhuma despesa registrada.', margin, yPosition);
+                yPosition += 15;
+            }
+            
+            // 4. ANÁLISE MENSAL
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.text('ANÁLISE MENSAL', margin, yPosition);
+            
+            yPosition += 10;
+            
+            const sortedMonths = Object.entries(monthlyTotals)
+                .sort((a, b) => {
+                    const [monthA, yearA] = a[0].split('/');
+                    const [monthB, yearB] = b[0].split('/');
+                    const monthOrder = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 
+                                    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+                    
+                    if (parseInt(yearA) !== parseInt(yearB)) {
+                        return parseInt(yearA) - parseInt(yearB);
+                    }
+                    return monthOrder.indexOf(monthA.toLowerCase()) - monthOrder.indexOf(monthB.toLowerCase());
+                });
+            
+            if (sortedMonths.length > 0) {
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                
+                // Cabeçalho da tabela
+                doc.setFillColor(240, 240, 240);
+                doc.rect(margin, yPosition - 5, contentWidth, 8, 'F');
+                
+                doc.setFont('helvetica', 'bold');
+                doc.text('PERÍODO', margin + 5, yPosition);
+                doc.text('RECEITAS', margin + 70, yPosition);
+                doc.text('DESPESAS', margin + 120, yPosition);
+                doc.text('SALDO', pageWidth - margin - 5, yPosition, { align: 'right' });
+                
+                yPosition += 8;
+                
+                // Linhas da tabela
+                sortedMonths.forEach(([month, totals], index) => {
+                    const balance = totals.income - totals.expenses;
+                    
+                    // Alternar cores das linhas
+                    if (index % 2 === 0) {
+                        doc.setFillColor(250, 250, 250);
+                    } else {
+                        doc.setFillColor(245, 245, 245);
+                    }
+                    doc.rect(margin, yPosition - 4, contentWidth, 8, 'F');
+                    
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(month, margin + 5, yPosition);
+                    doc.text(`R$ ${this.app.formatCurrency(totals.income)}`, margin + 70, yPosition);
+                    doc.text(`R$ ${this.app.formatCurrency(totals.expenses)}`, margin + 120, yPosition);
+                    
+                    // Colorir saldo
+                    if (balance >= 0) {
+                        doc.setTextColor(0, 150, 0); // Verde para positivo
+                    } else {
+                        doc.setTextColor(200, 0, 0); // Vermelho para negativo
+                    }
+                    doc.text(`R$ ${this.app.formatCurrency(balance)}`, pageWidth - margin - 5, yPosition, { align: 'right' });
+                    
+                    doc.setTextColor(0, 0, 0); // Resetar cor
+                    
+                    yPosition += 8;
+                    
+                    // Verificar se precisa de nova página
+                    if (yPosition > 270 && index < sortedMonths.length - 1) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                });
+                
+                yPosition += 10;
+            }
+            
+            // 5. INVESTIMENTOS
+            if (investments.length > 0) {
+                doc.setFontSize(16);
+                doc.setFont('helvetica', 'bold');
+                doc.text('INVESTIMENTOS', margin, yPosition);
+                
+                yPosition += 10;
+                
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                
+                // Cabeçalho da tabela
+                doc.setFillColor(240, 240, 240);
+                doc.rect(margin, yPosition - 5, contentWidth, 8, 'F');
+                
+                doc.setFont('helvetica', 'bold');
+                doc.text('NOME', margin + 5, yPosition);
+                doc.text('TIPO', margin + 70, yPosition);
+                doc.text('VALOR INVESTIDO', margin + 120, yPosition);
+                doc.text('VALOR ATUAL', pageWidth - margin - 30, yPosition);
+                doc.text('RENT.', pageWidth - margin - 5, yPosition, { align: 'right' });
+                
+                yPosition += 8;
+                
+                // Linhas da tabela
+                investments.forEach((investment, index) => {
+                    const currentValue = investment.currentValue || investment.value;
+                    const profit = currentValue - investment.value;
+                    const profitPercentage = (profit / investment.value) * 100;
+                    
+                    // Alternar cores das linhas
+                    if (index % 2 === 0) {
+                        doc.setFillColor(250, 250, 250);
+                    } else {
+                        doc.setFillColor(245, 245, 245);
+                    }
+                    doc.rect(margin, yPosition - 4, contentWidth, 8, 'F');
+                    
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(investment.name.substring(0, 20), margin + 5, yPosition);
+                    doc.text(investment.type.substring(0, 15), margin + 70, yPosition);
+                    doc.text(`R$ ${this.app.formatCurrency(investment.value)}`, margin + 120, yPosition);
+                    doc.text(`R$ ${this.app.formatCurrency(currentValue)}`, pageWidth - margin - 30, yPosition);
+                    
+                    // Colorir rentabilidade
+                    if (profit >= 0) {
+                        doc.setTextColor(0, 150, 0); // Verde para positivo
+                    } else {
+                        doc.setTextColor(200, 0, 0); // Vermelho para negativo
+                    }
+                    doc.text(`${profitPercentage.toFixed(1)}%`, pageWidth - margin - 5, yPosition, { align: 'right' });
+                    
+                    doc.setTextColor(0, 0, 0); // Resetar cor
+                    
+                    yPosition += 8;
+                    
+                    // Verificar se precisa de nova página
+                    if (yPosition > 270 && index < investments.length - 1) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                });
+                
+                yPosition += 10;
+            }
+            
+            // 6. ALERTAS E LIMITES
+            if (limits.length > 0) {
+                doc.setFontSize(16);
+                doc.setFont('helvetica', 'bold');
+                doc.text('ALERTAS E LIMITES CONFIGURADOS', margin, yPosition);
+                
+                yPosition += 10;
+                
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                
+                limits.forEach((limit, index) => {
+                    const spent = this.app.database.getCategorySpentThisMonth(limit.category);
+                    const percentage = (spent / limit.limit) * 100;
+                    
+                    doc.text(`• ${limit.category}:`, margin + 5, yPosition);
+                    doc.text(`Limite: R$ ${this.app.formatCurrency(limit.limit)}`, margin + 50, yPosition);
+                    doc.text(`Gasto: R$ ${this.app.formatCurrency(spent)} (${percentage.toFixed(1)}%)`, margin + 120, yPosition);
+                    
+                    // Indicador visual
+                    if (percentage > 100) {
+                        doc.setTextColor(200, 0, 0);
+                        doc.text('⛔ LIMITE ULTRAPASSADO', pageWidth - margin - 5, yPosition, { align: 'right' });
+                    } else if (percentage > 80) {
+                        doc.setTextColor(255, 140, 0);
+                        doc.text('⚠️ PRÓXIMO DO LIMITE', pageWidth - margin - 5, yPosition, { align: 'right' });
+                    } else {
+                        doc.setTextColor(0, 150, 0);
+                        doc.text('✅ DENTRO DO LIMITE', pageWidth - margin - 5, yPosition, { align: 'right' });
+                    }
+                    
+                    doc.setTextColor(0, 0, 0);
+                    yPosition += 8;
+                    
+                    // Verificar se precisa de nova página
+                    if (yPosition > 270 && index < limits.length - 1) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                });
+                
+                yPosition += 10;
+            }
+            
+            // 7. RECOMENDAÇÕES (se houver dados)
+            if (transactions.length > 5) {
+                doc.setFontSize(16);
+                doc.setFont('helvetica', 'bold');
+                doc.text('RECOMENDAÇÕES', margin, yPosition);
+                
+                yPosition += 10;
+                
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                
+                const recommendations = [];
+                
+                // Análise de gastos
+                const topExpenseCategory = sortedCategories.length > 0 ? sortedCategories[0] : null;
+                if (topExpenseCategory && (topExpenseCategory[1] / totalExpenses) > 0.4) {
+                    recommendations.push(`• A categoria "${topExpenseCategory[0]}" representa ${((topExpenseCategory[1] / totalExpenses) * 100).toFixed(1)}% dos seus gastos. Considere rever estes custos.`);
+                }
+                
+                // Análise de saldo
+                if (currentBalance < 0) {
+                    recommendations.push(`• Seu saldo atual é negativo (R$ ${this.app.formatCurrency(currentBalance)}). Recomendamos reduzir despesas ou aumentar receitas.`);
+                }
+                
+                // Análise de poupança
+                const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
+                if (savingsRate < 10 && savingsRate > 0) {
+                    recommendations.push(`• Sua taxa de poupança é de ${savingsRate.toFixed(1)}%. Recomenda-se economizar pelo menos 20% da renda.`);
+                } else if (savingsRate >= 20) {
+                    recommendations.push(`• Ótimo! Sua taxa de poupança é de ${savingsRate.toFixed(1)}%. Continue assim!`);
+                }
+                
+                // Análise de investimentos
+                const investmentRatio = totalIncome > 0 ? (totalInvestments / totalIncome) * 100 : 0;
+                if (investmentRatio < 5 && savingsRate > 15) {
+                    recommendations.push(`• Considere destinar parte da sua poupança para investimentos para fazer seu dinheiro trabalhar para você.`);
+                }
+                
+                // Adicionar recomendações
+                if (recommendations.length > 0) {
+                    recommendations.forEach((rec, index) => {
+                        const lines = doc.splitTextToSize(rec, contentWidth - 10);
+                        lines.forEach(line => {
+                            doc.text(line, margin + 5, yPosition);
+                            yPosition += 6;
+                        });
+                        yPosition += 4;
+                        
+                        // Verificar se precisa de nova página
+                        if (yPosition > 270 && index < recommendations.length - 1) {
+                            doc.addPage();
+                            yPosition = 20;
+                        }
+                    });
+                } else {
+                    doc.text('Seus hábitos financeiros estão saudáveis. Continue com o bom trabalho!', margin, yPosition);
+                    yPosition += 15;
+                }
+            }
+            
+            // 8. RODAPÉ
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'italic');
+            doc.setTextColor(100, 100, 100);
+            doc.text('Relatório gerado pelo Sistema de Finanças Pessoais v4.3', pageWidth / 2, 285, { align: 'center' });
+            doc.text('Confidencial - Uso interno', pageWidth / 2, 290, { align: 'center' });
+            
+            // Salvar PDF
+            doc.save(`relatorio_financeiro_completo_${new Date().toISOString().slice(0, 10)}.pdf`);
+            
+            this.app.showNotification('Relatório PDF gerado com sucesso!', 'success');
+            
+        } catch (error) {
+            console.error('Erro ao gerar relatório:', error);
+            this.app.showNotification(`Erro ao gerar relatório: ${error.message}`, 'error');
+        }
     }
 
     async generateBackup() {
