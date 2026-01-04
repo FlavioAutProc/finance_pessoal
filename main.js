@@ -108,6 +108,9 @@ class AppController {
         document.getElementById('mobileBackupBtn')?.addEventListener('click', () => this.showBackupModal());
         document.getElementById('cancelBtn')?.addEventListener('click', () => this.navigateTo('transactions'));
         document.getElementById('addLimitBtn')?.addEventListener('click', () => this.addNewLimit());
+
+        // No método setupEventListeners() do AppController, adicione:
+        document.getElementById('clearAllTransactionsBtn')?.addEventListener('click', () => this.clearAllTransactions());
         
         // Botões do welcome state
         document.getElementById('welcomeAddTransaction')?.addEventListener('click', () => this.navigateTo('add-transaction'));
@@ -141,7 +144,7 @@ class AppController {
         document.getElementById('importBtn')?.addEventListener('click', () => this.importExportService.handleImport());
         document.getElementById('exportBtn')?.addEventListener('click', () => this.importExportService.handleExport());
         document.getElementById('exportDateRange')?.addEventListener('change', (e) => {
-            document.getElementById('customDateRange').style.display = 
+        document.getElementById('customDateRange').style.display = 
                 e.target.value === 'custom' ? 'block' : 'none';
         });
          // NOVA FUNÇÃO: Exportar relatório completo
@@ -682,6 +685,62 @@ class AppController {
         } catch (error) {
             console.error('Erro ao excluir investimento:', error);
             this.showNotification('Erro ao excluir investimento: ' + error.message, 'error');
+        }
+    }
+
+    /**
+ * Apaga todas as transações após confirmação
+ */
+    async clearAllTransactions() {
+        try {
+            // Verificar se há transações
+            const count = await this.database.getTransactionCount();
+            
+            if (count === 0) {
+                this.showNotification('Não há transações para apagar.', 'info');
+                return;
+            }
+            
+            // Solicitar confirmação
+            const confirmed = confirm(`ATENÇÃO: Você está prestes a apagar TODAS as ${count} transações.\n\nEsta ação NÃO pode ser desfeita.\n\nDeseja continuar?`);
+            
+            if (!confirmed) {
+                this.showNotification('Operação cancelada.', 'info');
+                return;
+            }
+            
+            // Solicitar confirmação adicional
+            const finalConfirmation = confirm(`CONFIRMAÇÃO FINAL: Você realmente quer apagar permanentemente ${count} transações?\n\nDigite "APAGAR" para confirmar.`);
+            
+            if (!finalConfirmation) {
+                this.showNotification('Operação cancelada.', 'info');
+                return;
+            }
+            
+            // Opcional: Pedir para digitar uma palavra para confirmar
+            const userInput = prompt(`Para confirmar a exclusão de TODAS as ${count} transações, digite "APAGAR TUDO":`);
+            
+            if (userInput !== "APAGAR TUDO") {
+                this.showNotification('Confirmação incorreta. Operação cancelada.', 'warning');
+                return;
+            }
+            
+            // Mostrar indicador de processamento
+            this.showNotification('Apagando transações...', 'info');
+            
+            // Apagar todas as transações
+            await this.database.clearAllTransactions();
+            
+            // Atualizar interface
+            await this.transactionTable.loadTransactions();
+            await this.dashboardController.updateDashboard();
+            await this.chartsController.updateAllCharts();
+            
+            this.showNotification(`Todas as ${count} transações foram apagadas com sucesso!`, 'success');
+            
+        } catch (error) {
+            console.error('Erro ao apagar transações:', error);
+            this.showNotification('Erro ao apagar transações: ' + error.message, 'error');
         }
     }
 
@@ -1785,6 +1844,22 @@ class DatabaseService {
             } catch (error) {
                 reject(error);
             }
+        });
+    }
+
+    /**
+ * Apaga todas as transações
+ */
+    async clearAllTransactions() {
+        return new Promise((resolve, reject) => {
+            if (!this.db) return reject(new Error('Banco não inicializado'));
+            
+            const transaction = this.db.transaction(['transactions'], 'readwrite');
+            const store = transaction.objectStore('transactions');
+            const request = store.clear();
+            
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
         });
     }
 }
